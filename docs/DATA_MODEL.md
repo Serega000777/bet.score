@@ -5,6 +5,7 @@ erDiagram
   USER ||--o{ SUBSCRIPTION : owns
   SPORT ||--o{ COMPETITION : contains
   COMPETITION ||--o{ EVENT : schedules
+  SPORT ||--o{ TEAM : categorizes
   TEAM ||--o{ EVENT_PARTICIPANT : participates
   EVENT ||--o{ EVENT_PARTICIPANT : has
   EVENT ||--o{ EVENT_SNAPSHOT : captures
@@ -19,6 +20,18 @@ erDiagram
     string provider_key UK
     timestamptz starts_at
     string status
+  }
+  TEAM {
+    uuid id PK
+    uuid sport_id FK
+    string name
+    string short_name
+  }
+  EVENT_PARTICIPANT {
+    uuid event_id FK
+    uuid team_id FK
+    string role
+    int score
   }
   EVENT_SNAPSHOT {
     uuid id PK
@@ -37,5 +50,4 @@ erDiagram
   }
 ```
 
-Полная физическая схема будет создана после выбора первого вида спорта и поставщика. Канонические идентификаторы отделяются от provider-specific ключей.
-
+Физическая схема каталога уже хранит канонические команды, соревнования и события. Роль участника уникальна внутри матча, поэтому событие не может получить двух хозяев или двух гостей. Provider-specific идентификаторы будут добавлены отдельной таблицей соответствий после выбора поставщика.

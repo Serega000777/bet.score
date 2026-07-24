@@ -1,0 +1,101 @@
+from datetime import UTC, datetime
+from uuid import UUID
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from bet_score.application.catalog import CatalogService, EventQuery
+from bet_score.domain.catalog import (
+    EventStatus,
+    Participant,
+    ParticipantRole,
+    SportingEvent,
+)
+from bet_score.main import create_app
+from bet_score.presentation.api.dependencies import get_catalog_service
+
+EVENT_ID = UUID("40000000-0000-0000-0000-000000000001")
+
+
+def make_event() -> SportingEvent:
+    return SportingEvent(
+        id=EVENT_ID,
+        sport_code="football",
+        sport_name="Футбол",
+        competition_id=UUID("20000000-0000-0000-0000-000000000001"),
+        competition_name="Тестовая лига",
+        country_code="RU",
+        starts_at=datetime(2026, 8, 1, 16, tzinfo=UTC),
+        status=EventStatus.SCHEDULED,
+        participants=(
+            Participant(
+                id=UUID("30000000-0000-0000-0000-000000000001"),
+                name="Север",
+                short_name="SEV",
+                role=ParticipantRole.HOME,
+            ),
+            Participant(
+                id=UUID("30000000-0000-0000-0000-000000000002"),
+                name="Восток",
+                short_name="VOS",
+                role=ParticipantRole.AWAY,
+            ),
+        ),
+    )
+
+
+class FakeCatalogRepository:
+    def __init__(self, events: tuple[SportingEvent, ...]) -> None:
+        self.events = events
+        self.last_query: EventQuery | None = None
+
+    async def list_events(self, query: EventQuery) -> tuple[SportingEvent, ...]:
+        self.last_query = query
+        return self.events[: query.limit]
+
+    async def get_event(self, event_id: UUID) -> SportingEvent | None:
+        return next((event for event in self.events if event.id == event_id), None)
+
+
+@pytest.mark.asyncio
+async def test_catalog_service_limits_page_size() -> None:
+    repository = FakeCatalogRepository((make_event(),))
+    service = CatalogService(repository)
+
+    await service.list_upcoming_events(limit=500)
+
+    assert repository.last_query is not None
+    assert repository.last_query.limit == 100
+
+
+@pytest.mark.asyncio
+async def test_events_api_returns_canonical_match() -> None:
+    application = create_app()
+    application.dependency_overrides[get_catalog_service] = lambda: CatalogService(
+        FakeCatalogRepository((make_event(),))
+    )
+
+    transport = ASGITransport(app=application)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/events")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["count"] == 1
+    assert payload["items"][0]["home"]["name"] == "Север"
+    assert payload["items"][0]["away"]["name"] == "Восток"
+
+
+@pytest.mark.asyncio
+async def test_event_api_returns_structured_not_found_error() -> None:
+    application = create_app()
+    application.dependency_overrides[get_catalog_service] = lambda: CatalogService(
+        FakeCatalogRepository(())
+    )
+
+    transport = ASGITransport(app=application)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(f"/api/v1/events/{EVENT_ID}")
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "event_not_found"

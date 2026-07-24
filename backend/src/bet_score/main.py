@@ -5,12 +5,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from bet_score.config import get_settings
+from bet_score.infrastructure.database import dispose_engine
 from bet_score.presentation.api.router import api_router
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    yield
+    try:
+        yield
+    finally:
+        await dispose_engine()
 
 
 def create_app() -> FastAPI:

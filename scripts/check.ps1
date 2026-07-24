@@ -12,10 +12,10 @@ try {
 
 Push-Location "$PSScriptRoot\.."
 try {
-    pnpm lint
-    pnpm typecheck
-    pnpm test
-    pnpm build
+    corepack pnpm@10.13.1 --filter './frontend' --filter './telegram-mini-app' lint
+    corepack pnpm@10.13.1 --filter './frontend' --filter './telegram-mini-app' typecheck
+    corepack pnpm@10.13.1 --filter './frontend' --filter './telegram-mini-app' test
+    corepack pnpm@10.13.1 --filter './frontend' --filter './telegram-mini-app' build
     docker compose config --quiet
 } finally {
     Pop-Location
