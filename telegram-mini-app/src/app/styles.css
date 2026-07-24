@@ -1,0 +1,5 @@
+:root { font-family: Inter, system-ui, sans-serif; color: #15181b; background: #f2f4f3; }
+body { margin: 0; } main { min-height: 100vh; padding: 32px 20px; display: flex; flex-direction: column; justify-content: center; }
+main > span { color: #08785c; font-weight: 800; letter-spacing: .12em; } h1 { font-size: 42px; line-height: 1.02; letter-spacing: -.04em; margin: 18px 0; }
+p { color: #59636c; font-size: 18px; line-height: 1.5; } aside { margin-top: 32px; padding: 16px; border-radius: 14px; background: white; box-shadow: 0 10px 40px #17352f12; font-size: 14px; line-height: 1.45; }
+

@@ -1,0 +1,17 @@
+{
+  "name": "bet-score",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter './frontend' --filter './telegram-mini-app' dev",
+    "build": "pnpm --filter './frontend' --filter './telegram-mini-app' build",
+    "lint": "pnpm --filter './frontend' --filter './telegram-mini-app' lint",
+    "typecheck": "pnpm --filter './frontend' --filter './telegram-mini-app' typecheck",
+    "test": "pnpm --filter './frontend' --filter './telegram-mini-app' test"
+  }
+}
+
