@@ -1,0 +1,16 @@
+*
+!backend/
+!backend/**
+!database/
+!database/**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!frontend/
+!frontend/**
+!telegram-mini-app/
+!telegram-mini-app/**
+node_modules
+**/node_modules
+**/.next
+*.log

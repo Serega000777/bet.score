@@ -1,5 +1,18 @@
-:root { font-family: Inter, system-ui, sans-serif; color: #15181b; background: #f2f4f3; }
-body { margin: 0; } main { min-height: 100vh; padding: 32px 20px; display: flex; flex-direction: column; justify-content: center; }
-main > span { color: #08785c; font-weight: 800; letter-spacing: .12em; } h1 { font-size: 42px; line-height: 1.02; letter-spacing: -.04em; margin: 18px 0; }
-p { color: #59636c; font-size: 18px; line-height: 1.5; } aside { margin-top: 32px; padding: 16px; border-radius: 14px; background: white; box-shadow: 0 10px 40px #17352f12; font-size: 14px; line-height: 1.45; }
-
+:root { font-family: Inter, system-ui, sans-serif; color: var(--tg-theme-text-color, #15181b); background: var(--tg-theme-bg-color, #f2f4f3); }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { min-height: 100vh; padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; }
+header { display: flex; justify-content: space-between; align-items: center; }
+header strong { letter-spacing: .08em; }
+header span, .eyebrow { color: #08785c; font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+.state-card { margin: auto 0; text-align: center; }
+.state-card i { width: 56px; height: 56px; display: grid; place-items: center; margin: 0 auto 22px; border-radius: 18px; background: #dcebe6; color: #08785c; font-style: normal; font-weight: 800; }
+.state-card.error i { background: #f4dfe1; color: #a52d3c; }
+h1 { font-size: 40px; line-height: 1.04; letter-spacing: -.045em; margin: 16px 0; }
+p { color: var(--tg-theme-hint-color, #59636c); font-size: 17px; line-height: 1.55; }
+.dashboard { margin: auto 0; }
+.dashboard > p { max-width: 560px; }
+.identity-card { display: grid; grid-template-columns: auto 1fr; gap: 8px 20px; margin-top: 30px; padding: 20px; border-radius: 16px; background: var(--tg-theme-secondary-bg-color, #fff); box-shadow: 0 10px 40px #17352f12; font-size: 14px; }
+.identity-card span { color: var(--tg-theme-hint-color, #6f787f); }
+.identity-card strong { text-align: right; }
+footer { padding-top: 22px; color: var(--tg-theme-hint-color, #7c858c); font-size: 11px; text-align: center; }

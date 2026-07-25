@@ -58,3 +58,14 @@ class EventListResponse(BaseModel):
 class ErrorResponse(BaseModel):
     code: str
     message: str
+
+
+class TelegramAuthRequest(BaseModel):
+    init_data: str
+
+
+class UserResponse(BaseModel):
+    id: UUID
+    display_name: str
+    username: str | None
+    locale: str

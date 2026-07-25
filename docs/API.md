@@ -30,9 +30,23 @@
 }
 ```
 
+### Авторизация Telegram
+
+`POST /api/v1/auth/telegram`
+
+Принимает необработанную строку `init_data` из `Telegram.WebApp.initData`. Backend проверяет HMAC-подпись, `auth_date` и профиль пользователя. При успехе создаётся отзывная `HttpOnly` cookie-сессия; исходный session token в БД не хранится.
+
+`GET /api/v1/auth/me`
+
+Возвращает текущего пользователя по cookie. Без активной сессии отвечает HTTP 401 с кодом `authentication_required`.
+
+`DELETE /api/v1/auth/session`
+
+Отзывает серверную сессию, очищает cookie и возвращает HTTP 204.
+
 ## Будущие группы
 
-- `/auth` — сессии и внешние провайдеры;
+- дополнительные `/auth`-адаптеры — web OIDC после выбора провайдера;
 - `/sports`, `/competitions` — навигация по каталогу;
 - `/events/{id}/analysis` — объяснимый анализ;
 - `/events/{id}/news` — связанные новости;
