@@ -21,3 +21,6 @@
 - непрозрачные cookie-сессии, хранение только SHA-256 hash и серверный logout;
 - экраны авторизации Telegram Mini App без небезопасного browser bypass;
 - последовательный migration runner с checksum и PostgreSQL advisory lock.
+- provider-neutral ingestion-ядро с атомарной нормализацией событий;
+- таблицы сопоставления внешних ID и неизменяемые snapshots provenance;
+- обязательный PostgreSQL integration-тест идемпотентности ingestion в CI.

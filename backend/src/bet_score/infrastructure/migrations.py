@@ -10,7 +10,11 @@ MIGRATION_LOCK_ID = 7_203_114_092
 
 
 def migrations_path() -> Path:
-    for candidate in (Path("database/migrations"), Path("/app/database/migrations")):
+    for candidate in (
+        Path("database/migrations"),
+        Path("../database/migrations"),
+        Path("/app/database/migrations"),
+    ):
         if candidate.is_dir():
             return candidate
     raise RuntimeError("Каталог миграций не найден")
