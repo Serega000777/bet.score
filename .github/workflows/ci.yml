@@ -11,6 +11,24 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: bet_score_test
+          POSTGRES_USER: bet_score
+          POSTGRES_PASSWORD: bet_score
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bet_score -d bet_score_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql+asyncpg://bet_score:bet_score@localhost:5432/bet_score_test
+      TEST_DATABASE_URL: postgresql+asyncpg://bet_score:bet_score@localhost:5432/bet_score_test
     defaults:
       run:
         working-directory: backend
@@ -24,6 +42,7 @@ jobs:
       - run: ruff format --check .
       - run: ruff check .
       - run: mypy src
+      - run: bet-score-migrate
       - run: pytest
 
   clients:
@@ -48,4 +67,3 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker compose config --quiet
-
