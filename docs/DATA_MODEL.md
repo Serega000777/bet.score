@@ -3,6 +3,7 @@
 ```mermaid
 erDiagram
   USER ||--o{ SUBSCRIPTION : owns
+  USER ||--o{ USER_SESSION : authenticates
   SPORT ||--o{ COMPETITION : contains
   COMPETITION ||--o{ EVENT : schedules
   SPORT ||--o{ TEAM : categorizes
@@ -20,6 +21,13 @@ erDiagram
     string provider_key UK
     timestamptz starts_at
     string status
+  }
+  USER_SESSION {
+    uuid id PK
+    uuid user_id FK
+    bytes token_hash UK
+    timestamptz expires_at
+    boolean revoked
   }
   TEAM {
     uuid id PK

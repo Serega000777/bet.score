@@ -14,7 +14,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/migrations:/docker-entrypoint-initdb.d:ro
 
   redis:
     image: redis:7-alpine
@@ -29,19 +28,33 @@ services:
     volumes:
       - redis_data:/data
 
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: ${ENV_FILE:-.env.example}
+    command: ["bet-score-migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     env_file: ${ENV_FILE:-.env.example}
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
     ports:
@@ -50,7 +63,9 @@ services:
       - backend
 
   telegram-mini-app:
-    build: ./telegram-mini-app
+    build:
+      context: .
+      dockerfile: telegram-mini-app/Dockerfile
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
     ports:

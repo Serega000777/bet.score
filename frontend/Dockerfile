@@ -1,17 +1,18 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 RUN corepack enable
-COPY package.json ./
-RUN pnpm install --frozen-lockfile=false
-COPY . .
-RUN pnpm build
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY frontend/package.json ./frontend/package.json
+COPY telegram-mini-app/package.json ./telegram-mini-app/package.json
+RUN pnpm install --frozen-lockfile --filter @bet-score/web...
+COPY frontend ./frontend
+RUN pnpm --filter @bet-score/web build
 
 FROM node:22-alpine AS runtime
-WORKDIR /app
+WORKDIR /app/frontend
 ENV NODE_ENV=production
-RUN addgroup -S sportai && adduser -S sportai -G sportai
+RUN addgroup -S betscore && adduser -S betscore -G betscore
 COPY --from=build /app ./
-USER sportai
+USER betscore
 EXPOSE 3000
-CMD ["npm", "run", "start"]
-
+CMD ["node_modules/.bin/next", "start", "--port", "3000"]
