@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- Добавлены безопасные request ID, access-log и Prometheus-совместимые HTTP-метрики.
+
 ### Добавлено
 
 - фундамент монорепозитория bet.score;
