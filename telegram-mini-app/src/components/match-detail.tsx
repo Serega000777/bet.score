@@ -7,7 +7,9 @@ import {
   EventRequestError,
   formatEventDate,
   getEvent,
+  getEventProvenance,
   statusLabels,
+  type EventProvenance,
   type SportingEvent,
 } from '../lib/events';
 
@@ -78,6 +80,45 @@ export function MatchDetail({ eventId }: { eventId: string }) {
           bet.score не подменяет отсутствующие данные догадками.
         </p>
       </section>
+      <Provenance eventId={event.id} />
+    </section>
+  );
+}
+
+function Provenance({ eventId }: { eventId: string }) {
+  const [sources, setSources] = useState<EventProvenance[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getEventProvenance(eventId, controller.signal)
+      .then(setSources)
+      .catch(() => {
+        if (!controller.signal.aborted) setFailed(true);
+      });
+    return () => controller.abort();
+  }, [eventId]);
+
+  return (
+    <section className="provenance">
+      <p className="eyebrow">ИСТОЧНИКИ ДАННЫХ</p>
+      {sources === null && !failed && <p role="status">Проверяем происхождение фактов…</p>}
+      {failed && <p role="alert">Источники временно недоступны.</p>}
+      {sources?.length === 0 && <p>Для этого события источник пока не зафиксирован.</p>}
+      {sources && sources.length > 0 && (
+        <ul>
+          {sources.map((source) => (
+            <li key={`${source.provider_key}:${source.version}`}>
+              <strong>{source.provider_key}</strong>
+              <span>Версия {source.version}</span>
+              <time dateTime={source.observed_at}>
+                Наблюдение: {formatEventDate(source.observed_at)}
+              </time>
+              <code title={source.checksum}>{source.checksum.slice(0, 12)}…</code>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

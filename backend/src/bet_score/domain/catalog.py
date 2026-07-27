@@ -51,3 +51,12 @@ class SportingEvent:
     @property
     def away(self) -> Participant:
         return next(item for item in self.participants if item.role is ParticipantRole.AWAY)
+
+
+@dataclass(frozen=True, slots=True)
+class EventProvenance:
+    provider_key: str
+    version: str
+    observed_at: datetime
+    ingested_at: datetime
+    checksum: str

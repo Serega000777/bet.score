@@ -52,6 +52,13 @@ p { color: var(--tg-theme-hint-color, #59636c); font-size: 17px; line-height: 1.
 .analysis-pending { margin-top: 42px; padding: 22px; border-radius: 18px; background: var(--tg-theme-secondary-bg-color, #fff); }
 .analysis-pending h2 { margin: 7px 0 10px; font-size: 26px; letter-spacing: -.03em; }
 .analysis-pending p:last-child { margin-bottom: 0; font-size: 14px; }
+.provenance { margin-top: 16px; padding: 22px; border-radius: 18px; background: var(--tg-theme-secondary-bg-color, #fff); }
+.provenance > p:not(.eyebrow) { margin-bottom: 0; font-size: 13px; }
+.provenance ul { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+.provenance li { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; padding-top: 12px; border-top: 1px solid rgba(116, 128, 120, .16); font-size: 12px; }
+.provenance li span, .provenance li time { color: var(--tg-theme-hint-color, #6f787f); }
+.provenance li time { grid-column: 1 / -1; }
+.provenance code { grid-column: 1 / -1; overflow: hidden; color: var(--tg-theme-hint-color, #6f787f); font-size: 10px; text-overflow: ellipsis; }
 .detail-state { margin: auto 0; }
 .detail-state button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--tg-theme-button-color, #08785c); color: var(--tg-theme-button-text-color, #fff); font: inherit; font-weight: 800; }
 .back-link { display: block; margin-top: 20px; color: var(--tg-theme-link-color, #08785c); font-size: 14px; font-weight: 800; text-decoration: none; }

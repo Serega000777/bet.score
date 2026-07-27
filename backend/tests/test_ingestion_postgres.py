@@ -8,12 +8,14 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
+from bet_score.application.catalog import CatalogService
 from bet_score.application.ingestion import (
     EventIngestionService,
     IngestionConflictError,
 )
 from bet_score.domain.catalog import EventStatus
 from bet_score.domain.ingestion import ProviderCompetition, ProviderEvent, ProviderTeam
+from bet_score.infrastructure.catalog_repository import SqlAlchemyCatalogRepository
 from bet_score.infrastructure.ingestion_repository import SqlAlchemyEventIngestionRepository
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
@@ -116,5 +118,13 @@ async def test_postgres_ingestion_is_idempotent_and_preserves_provenance() -> No
                     ),
                     {"provider_key": provider_key},
                 )
+
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            sources = await CatalogService(
+                SqlAlchemyCatalogRepository(session)
+            ).list_event_provenance(first.event_id)
+
+        assert [source.version for source in sources] == ["v2", "v1", "delayed-v0"]
+        assert all(source.provider_key == provider_key for source in sources)
     finally:
         await engine.dispose()

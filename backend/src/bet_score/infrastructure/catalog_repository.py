@@ -3,12 +3,18 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, select, text
 from sqlalchemy.engine import RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bet_score.application.catalog import EventQuery
-from bet_score.domain.catalog import EventStatus, Participant, ParticipantRole, SportingEvent
+from bet_score.domain.catalog import (
+    EventProvenance,
+    EventStatus,
+    Participant,
+    ParticipantRole,
+    SportingEvent,
+)
 from bet_score.infrastructure.catalog_tables import (
     competition,
     event_participant,
@@ -34,6 +40,38 @@ class SqlAlchemyCatalogRepository:
         rows = (await self._session.execute(statement)).mappings().all()
         events = self._map_events(rows)
         return events[0] if events else None
+
+    async def list_event_provenance(self, event_id: UUID) -> tuple[EventProvenance, ...]:
+        rows = (
+            await self._session.execute(
+                text(
+                    """
+                    SELECT
+                      p.key AS provider_key,
+                      s.version,
+                      s.observed_at,
+                      s.ingested_at,
+                      s.checksum
+                    FROM provider_event_snapshot s
+                    JOIN data_provider p ON p.id = s.provider_id
+                    WHERE s.event_id = :event_id
+                    ORDER BY s.observed_at DESC, s.ingested_at DESC
+                    LIMIT 20
+                    """
+                ),
+                {"event_id": event_id},
+            )
+        ).mappings()
+        return tuple(
+            EventProvenance(
+                provider_key=row["provider_key"],
+                version=row["version"],
+                observed_at=row["observed_at"],
+                ingested_at=row["ingested_at"],
+                checksum=row["checksum"],
+            )
+            for row in rows
+        )
 
     @staticmethod
     def _base_statement() -> Select[Any]:

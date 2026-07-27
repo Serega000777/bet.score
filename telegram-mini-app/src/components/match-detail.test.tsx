@@ -23,13 +23,33 @@ afterEach(() => {
 
 describe('MatchDetail', () => {
   it('показывает только подтверждённые факты матча', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => response(event)));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) =>
+        String(input).endsWith('/provenance')
+          ? response({
+              count: 1,
+              items: [
+                {
+                  provider_key: 'test-provider',
+                  version: 'v2',
+                  observed_at: '2026-08-01T16:59:00Z',
+                  ingested_at: '2026-08-01T16:59:05Z',
+                  checksum: 'a'.repeat(64),
+                },
+              ],
+            })
+          : response(event),
+      ),
+    );
 
     render(<MatchDetail eventId={event.id} />);
 
     expect(await screen.findByText('1:0')).toBeDefined();
     expect(screen.getByText(/Премьер-лига/)).toBeDefined();
     expect(screen.getByText(/не подменяет отсутствующие данные догадками/i)).toBeDefined();
+    expect(await screen.findByText('test-provider')).toBeDefined();
+    expect(screen.getByText('Версия v2')).toBeDefined();
   });
 
   it('отличает отсутствующий матч от временной ошибки', async () => {
@@ -45,13 +65,14 @@ describe('MatchDetail', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(response({}, 503))
-      .mockResolvedValueOnce(response(event));
+      .mockResolvedValueOnce(response(event))
+      .mockResolvedValueOnce(response({ items: [], count: 0 }));
     vi.stubGlobal('fetch', fetchMock);
 
     render(<MatchDetail eventId={event.id} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Повторить' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(await screen.findByText('1:0')).toBeDefined();
   });
 });

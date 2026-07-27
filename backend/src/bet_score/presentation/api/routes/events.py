@@ -6,7 +6,13 @@ from fastapi.responses import JSONResponse
 
 from bet_score.application.catalog import EventNotFoundError
 from bet_score.presentation.api.dependencies import CatalogServiceDependency
-from bet_score.presentation.api.schemas import ErrorResponse, EventListResponse, EventResponse
+from bet_score.presentation.api.schemas import (
+    ErrorResponse,
+    EventListResponse,
+    EventProvenanceListResponse,
+    EventProvenanceResponse,
+    EventResponse,
+)
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -39,3 +45,32 @@ async def get_event(
             content={"code": "event_not_found", "message": str(error)},
         )
     return EventResponse.from_domain(event)
+
+
+@router.get(
+    "/{event_id}/provenance",
+    response_model=EventProvenanceListResponse,
+    responses={404: {"model": ErrorResponse}},
+)
+async def get_event_provenance(
+    event_id: UUID,
+    service: CatalogServiceDependency,
+) -> EventProvenanceListResponse | JSONResponse:
+    try:
+        sources = await service.list_event_provenance(event_id)
+    except EventNotFoundError as error:
+        return JSONResponse(
+            status_code=404,
+            content={"code": "event_not_found", "message": str(error)},
+        )
+    items = [
+        EventProvenanceResponse(
+            provider_key=source.provider_key,
+            version=source.version,
+            observed_at=source.observed_at,
+            ingested_at=source.ingested_at,
+            checksum=source.checksum,
+        )
+        for source in sources
+    ]
+    return EventProvenanceListResponse(items=items, count=len(items))

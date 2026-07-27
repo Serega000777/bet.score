@@ -25,6 +25,19 @@ export type EventList = {
   count: number;
 };
 
+export type EventProvenance = {
+  provider_key: string;
+  version: string;
+  observed_at: string;
+  ingested_at: string;
+  checksum: string;
+};
+
+export type EventProvenanceList = {
+  items: EventProvenance[];
+  count: number;
+};
+
 export const statusLabels: Record<EventStatus, string> = {
   scheduled: 'Скоро',
   live: 'LIVE',
