@@ -1,0 +1,130 @@
+'use client';
+
+import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
+
+import {
+  EventRequestError,
+  formatEventDate,
+  getEvent,
+  statusLabels,
+  type SportingEvent,
+} from '../lib/events';
+
+type DetailState =
+  | { kind: 'loading' }
+  | { kind: 'not-found' }
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; event: SportingEvent };
+
+export function MatchDetail({ eventId }: { eventId: string }) {
+  const [state, setState] = useState<DetailState>({ kind: 'loading' });
+  const [requestKey, setRequestKey] = useState(0);
+  const retry = useCallback(() => {
+    setState({ kind: 'loading' });
+    setRequestKey((value) => value + 1);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getEvent(eventId, controller.signal)
+      .then((event) => setState({ kind: 'ready', event }))
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (error instanceof EventRequestError && error.status === 404) {
+          setState({ kind: 'not-found' });
+          return;
+        }
+        setState({
+          kind: 'error',
+          message: error instanceof Error ? error.message : 'Неизвестная ошибка',
+        });
+      });
+    return () => controller.abort();
+  }, [eventId, requestKey]);
+
+  if (state.kind === 'loading') {
+    return <DetailMessage title="Загружаем матч" mark="···" />;
+  }
+  if (state.kind === 'not-found') {
+    return <DetailMessage title="Матч не найден" text="Возможно, событие было удалено." mark="○" />;
+  }
+  if (state.kind === 'error') {
+    return (
+      <DetailMessage title="Матч временно недоступен" text={state.message} mark="!" error>
+        <button type="button" onClick={retry}>Повторить</button>
+      </DetailMessage>
+    );
+  }
+
+  const { event } = state;
+  return (
+    <section className="match-detail">
+      <div className="detail-meta">
+        <span>{event.sport} · {event.competition}</span>
+        <span className={`match-status status-${event.status}`}>{statusLabels[event.status]}</span>
+      </div>
+      <time dateTime={event.starts_at}>{formatEventDate(event.starts_at)}</time>
+      <div className="detail-teams">
+        <DetailTeam name={event.home.name} shortName={event.home.short_name} />
+        <strong>{score(event)}</strong>
+        <DetailTeam name={event.away.name} shortName={event.away.short_name} away />
+      </div>
+      <section className="analysis-pending">
+        <p className="eyebrow">ОБЪЯСНИМЫЙ АНАЛИЗ</p>
+        <h2>Факты собираются</h2>
+        <p>
+          Анализ появится только после проверки источников и сохранения provenance.
+          bet.score не подменяет отсутствующие данные догадками.
+        </p>
+      </section>
+    </section>
+  );
+}
+
+function DetailTeam({
+  name,
+  shortName,
+  away = false,
+}: {
+  name: string;
+  shortName: string;
+  away?: boolean;
+}) {
+  return (
+    <div className={`detail-team${away ? ' away' : ''}`}>
+      <i>{shortName}</i>
+      <strong>{name}</strong>
+    </div>
+  );
+}
+
+function score(event: SportingEvent): string {
+  return event.home.score === null || event.away.score === null
+    ? 'VS'
+    : `${event.home.score}:${event.away.score}`;
+}
+
+function DetailMessage({
+  title,
+  mark,
+  text,
+  error = false,
+  children,
+}: {
+  title: string;
+  mark: string;
+  text?: string;
+  error?: boolean;
+  children?: React.ReactNode;
+}) {
+  return (
+    <section className={`state-card detail-state${error ? ' error' : ''}`} role={error ? 'alert' : 'status'}>
+      <i>{mark}</i>
+      <h1>{title}</h1>
+      {text && <p>{text}</p>}
+      {children}
+      <Link className="back-link" href="/">← К каталогу</Link>
+    </section>
+  );
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 
 import {
   formatEventDate,
@@ -61,7 +62,12 @@ export function EventCatalog() {
   return (
     <div className="match-list">
       {state.events.map((event) => (
-        <article className="match-card" key={event.id}>
+        <Link
+          aria-label={`${event.home.name} — ${event.away.name}`}
+          className="match-card"
+          href={`/matches/${event.id}`}
+          key={event.id}
+        >
           <div className="match-meta">
             <span>{event.competition}</span>
             <time dateTime={event.starts_at}>{formatEventDate(event.starts_at)}</time>
@@ -74,7 +80,8 @@ export function EventCatalog() {
           <span className={`match-status status-${event.status}`}>
             {statusLabels[event.status]}
           </span>
-        </article>
+          <span className="open-match">Открыть →</span>
+        </Link>
       ))}
     </div>
   );
