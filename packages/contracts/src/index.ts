@@ -38,6 +38,12 @@ export type EventProvenanceList = {
   count: number;
 };
 
+export type EventUpdated = {
+  type: 'event.updated';
+  protocol_version: 1;
+  event_id: string;
+};
+
 export const statusLabels: Record<EventStatus, string> = {
   scheduled: 'Скоро',
   live: 'LIVE',

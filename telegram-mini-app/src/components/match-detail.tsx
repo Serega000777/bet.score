@@ -8,6 +8,7 @@ import {
   formatEventDate,
   getEvent,
   getEventProvenance,
+  subscribeToEvent,
   statusLabels,
   type EventProvenance,
   type SportingEvent,
@@ -44,6 +45,15 @@ export function MatchDetail({ eventId }: { eventId: string }) {
       });
     return () => controller.abort();
   }, [eventId, requestKey]);
+
+  useEffect(() => {
+    if (state.kind !== 'ready') return;
+    return subscribeToEvent(eventId, () => {
+      getEvent(eventId)
+        .then((event) => setState({ kind: 'ready', event }))
+        .catch(() => undefined);
+    });
+  }, [eventId, state.kind]);
 
   if (state.kind === 'loading') {
     return <DetailMessage title="Загружаем матч" mark="···" />;
