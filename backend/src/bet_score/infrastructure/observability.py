@@ -20,6 +20,8 @@ class HttpMetrics:
     def __init__(self) -> None:
         self._requests: Counter[tuple[str, str, int]] = Counter()
         self._duration_seconds: dict[tuple[str, str], float] = defaultdict(float)
+        self._live_connections = 0
+        self._live_rejections = 0
         self._lock = Lock()
 
     def observe(self, method: str, route: str, status_code: int, duration: float) -> None:
@@ -36,6 +38,8 @@ class HttpMetrics:
         with self._lock:
             requests = sorted(self._requests.items())
             durations = sorted(self._duration_seconds.items())
+            live_connections = self._live_connections
+            live_rejections = self._live_rejections
         for (method, route, status), count in requests:
             lines.append(
                 "bet_score_http_requests_total"
@@ -53,7 +57,26 @@ class HttpMetrics:
                 "bet_score_http_request_duration_seconds_total"
                 f'{{method="{method}",route="{route}"}} {duration:.9f}'
             )
+        lines.extend(
+            [
+                "# HELP bet_score_live_connections Active LIVE WebSocket connections.",
+                "# TYPE bet_score_live_connections gauge",
+                f"bet_score_live_connections {live_connections}",
+                "# HELP bet_score_live_connection_rejections_total "
+                "LIVE connections rejected by capacity limits.",
+                "# TYPE bet_score_live_connection_rejections_total counter",
+                f"bet_score_live_connection_rejections_total {live_rejections}",
+            ]
+        )
         return "\n".join(lines) + "\n"
+
+    def set_live_connections(self, value: int) -> None:
+        with self._lock:
+            self._live_connections = value
+
+    def reject_live_connection(self) -> None:
+        with self._lock:
+            self._live_rejections += 1
 
 
 def _request_id(request: Request) -> str:

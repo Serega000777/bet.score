@@ -77,6 +77,16 @@ Handshake принимает только UUID существующего соб
 уведомления клиент перечитывает каноническое состояние через REST; при разрыве
 соединения использует exponential backoff с пределом 30 секунд.
 
+Сервер отправляет `{"type":"heartbeat","protocol_version":1}` с интервалом
+`LIVE_HEARTBEAT_SECONDS`, не отменяя ожидающую Redis-подписку. Одновременно
+действуют process-local лимиты `LIVE_MAX_CONNECTIONS` и
+`LIVE_MAX_CONNECTIONS_PER_EVENT`; превышение отклоняется WebSocket-кодом `4429`.
+Общий кластерный предел рассчитывается с учётом количества workers и реплик.
+
+Prometheus endpoint содержит gauge `bet_score_live_connections` и counter
+`bet_score_live_connection_rejections_total`. Метрики не используют UUID события
+или IP клиента как labels, поэтому их cardinality ограничена.
+
 ## Будущие группы
 
 - дополнительные `/auth`-адаптеры — web OIDC после выбора провайдера;
