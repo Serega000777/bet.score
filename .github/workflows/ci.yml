@@ -77,3 +77,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker compose config --quiet
+      - name: Validate Prometheus configuration and alert rules
+        run: >-
+          docker run --rm
+          --entrypoint=promtool
+          -v "${{ github.workspace }}/infrastructure/monitoring:/etc/prometheus:ro"
+          prom/prometheus:v3.5.0
+          check config /etc/prometheus/prometheus.yml

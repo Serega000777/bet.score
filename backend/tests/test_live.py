@@ -57,6 +57,7 @@ def test_live_stream_forwards_versioned_event_invalidation() -> None:
             "protocol_version": 1,
             "event_id": str(EVENT_ID),
         }
+    assert "bet_score_live_connection_attempts_total 1" in (application.state.http_metrics.render())
 
 
 def test_live_stream_rejects_untrusted_browser_origin() -> None:

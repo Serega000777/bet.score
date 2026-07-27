@@ -16,14 +16,19 @@ REQUEST_ID_HEADER = "X-Request-ID"
 CORRELATION_ID_HEADER = "X-Correlation-ID"
 _UNKNOWN_ROUTE = "unmatched"
 _SAFE_METHOD = re.compile(r"^[A-Z]{1,16}$")
+_DURATION_BUCKETS = (0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, float("inf"))
 
 
 class HttpMetrics:
-    def __init__(self) -> None:
+    def __init__(self, *, live_connection_limit: int) -> None:
         self._requests: Counter[tuple[str, str, int]] = Counter()
         self._duration_seconds: dict[tuple[str, str], float] = defaultdict(float)
+        self._duration_count: Counter[tuple[str, str]] = Counter()
+        self._duration_buckets: Counter[tuple[str, str, float]] = Counter()
         self._live_connections = 0
+        self._live_attempts = 0
         self._live_rejections = 0
+        self._live_connection_limit = live_connection_limit
         self._lock = Lock()
 
     def observe(self, method: str, route: str, status_code: int, duration: float) -> None:
@@ -31,6 +36,10 @@ class HttpMetrics:
         with self._lock:
             self._requests[(safe_method, route, status_code)] += 1
             self._duration_seconds[(safe_method, route)] += duration
+            self._duration_count[(safe_method, route)] += 1
+            for bucket in _DURATION_BUCKETS:
+                if duration <= bucket:
+                    self._duration_buckets[(safe_method, route, bucket)] += 1
 
     def render(self, outbox: OutboxStats | None = None) -> str:
         lines = [
@@ -40,7 +49,10 @@ class HttpMetrics:
         with self._lock:
             requests = sorted(self._requests.items())
             durations = sorted(self._duration_seconds.items())
+            duration_counts = sorted(self._duration_count.items())
+            duration_buckets = sorted(self._duration_buckets.items())
             live_connections = self._live_connections
+            live_attempts = self._live_attempts
             live_rejections = self._live_rejections
         for (method, route, status), count in requests:
             lines.append(
@@ -61,9 +73,38 @@ class HttpMetrics:
             )
         lines.extend(
             [
+                "# HELP bet_score_http_request_duration_seconds HTTP request duration.",
+                "# TYPE bet_score_http_request_duration_seconds histogram",
+            ]
+        )
+        for (method, route, bucket), count in duration_buckets:
+            le = "+Inf" if bucket == float("inf") else f"{bucket:g}"
+            lines.append(
+                "bet_score_http_request_duration_seconds_bucket"
+                f'{{method="{method}",route="{route}",le="{le}"}} {count}'
+            )
+        for (method, route), duration in durations:
+            lines.append(
+                "bet_score_http_request_duration_seconds_sum"
+                f'{{method="{method}",route="{route}"}} {duration:.9f}'
+            )
+        for (method, route), count in duration_counts:
+            lines.append(
+                "bet_score_http_request_duration_seconds_count"
+                f'{{method="{method}",route="{route}"}} {count}'
+            )
+        lines.extend(
+            [
                 "# HELP bet_score_live_connections Active LIVE WebSocket connections.",
                 "# TYPE bet_score_live_connections gauge",
                 f"bet_score_live_connections {live_connections}",
+                "# HELP bet_score_live_connection_limit Configured LIVE connection limit.",
+                "# TYPE bet_score_live_connection_limit gauge",
+                f"bet_score_live_connection_limit {self._live_connection_limit}",
+                "# HELP bet_score_live_connection_attempts_total "
+                "Trusted-origin LIVE connection attempts.",
+                "# TYPE bet_score_live_connection_attempts_total counter",
+                f"bet_score_live_connection_attempts_total {live_attempts}",
                 "# HELP bet_score_live_connection_rejections_total "
                 "LIVE connections rejected by capacity limits.",
                 "# TYPE bet_score_live_connection_rejections_total counter",
@@ -97,6 +138,10 @@ class HttpMetrics:
     def set_live_connections(self, value: int) -> None:
         with self._lock:
             self._live_connections = value
+
+    def attempt_live_connection(self) -> None:
+        with self._lock:
+            self._live_attempts += 1
 
     def reject_live_connection(self) -> None:
         with self._lock:
