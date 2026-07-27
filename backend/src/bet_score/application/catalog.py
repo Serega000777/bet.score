@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from typing import Protocol
 from uuid import UUID
 
-from bet_score.domain.catalog import SportingEvent
+from bet_score.domain.catalog import EventProvenance, SportingEvent
 
 
 class EventNotFoundError(Exception):
@@ -22,6 +22,8 @@ class CatalogRepository(Protocol):
     async def list_events(self, query: EventQuery) -> tuple[SportingEvent, ...]: ...
 
     async def get_event(self, event_id: UUID) -> SportingEvent | None: ...
+
+    async def list_event_provenance(self, event_id: UUID) -> tuple[EventProvenance, ...]: ...
 
 
 class CatalogService:
@@ -46,3 +48,8 @@ class CatalogService:
         if event is None:
             raise EventNotFoundError(event_id)
         return event
+
+    async def list_event_provenance(self, event_id: UUID) -> tuple[EventProvenance, ...]:
+        if await self._repository.get_event(event_id) is None:
+            raise EventNotFoundError(event_id)
+        return await self._repository.list_event_provenance(event_id)

@@ -1,7 +1,13 @@
-import type { EventList, SportingEvent } from '@bet-score/contracts';
+import type {
+  EventList,
+  EventProvenance,
+  EventProvenanceList,
+  SportingEvent,
+} from '@bet-score/contracts';
 
 export {
   statusLabels,
+  type EventProvenance,
   type SportingEvent,
 } from '@bet-score/contracts';
 
@@ -42,6 +48,22 @@ export class EventRequestError extends Error {
   ) {
     super(message);
   }
+}
+
+export async function getEventProvenance(
+  id: string,
+  signal?: AbortSignal,
+): Promise<EventProvenance[]> {
+  const response = await fetch(`${apiUrl}/events/${encodeURIComponent(id)}/provenance`, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error('Не удалось загрузить источники');
+  }
+  const payload = (await response.json()) as EventProvenanceList;
+  return payload.items;
 }
 
 export function formatEventDate(value: string): string {

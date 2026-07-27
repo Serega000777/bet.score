@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 
 from bet_score.application.catalog import CatalogService, EventQuery
 from bet_score.domain.catalog import (
+    EventProvenance,
     EventStatus,
     Participant,
     ParticipantRole,
@@ -56,6 +57,17 @@ class FakeCatalogRepository:
     async def get_event(self, event_id: UUID) -> SportingEvent | None:
         return next((event for event in self.events if event.id == event_id), None)
 
+    async def list_event_provenance(self, event_id: UUID) -> tuple[EventProvenance, ...]:
+        return (
+            EventProvenance(
+                provider_key="test-provider",
+                version="v1",
+                observed_at=datetime(2026, 8, 1, 15, tzinfo=UTC),
+                ingested_at=datetime(2026, 8, 1, 15, 1, tzinfo=UTC),
+                checksum="a" * 64,
+            ),
+        )
+
 
 @pytest.mark.asyncio
 async def test_catalog_service_limits_page_size() -> None:
@@ -99,3 +111,23 @@ async def test_event_api_returns_structured_not_found_error() -> None:
 
     assert response.status_code == 404
     assert response.json()["code"] == "event_not_found"
+
+
+@pytest.mark.asyncio
+async def test_event_provenance_api_excludes_raw_provider_payload() -> None:
+    application = create_app()
+    application.dependency_overrides[get_catalog_service] = lambda: CatalogService(
+        FakeCatalogRepository((make_event(),))
+    )
+
+    transport = ASGITransport(app=application)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(f"/api/v1/events/{EVENT_ID}/provenance")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["count"] == 1
+    assert payload["items"][0]["provider_key"] == "test-provider"
+    assert payload["items"][0]["checksum"] == "a" * 64
+    assert "payload" not in payload["items"][0]
+    assert "external_id" not in payload["items"][0]

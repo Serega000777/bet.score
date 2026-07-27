@@ -55,6 +55,19 @@ class EventListResponse(BaseModel):
     count: int
 
 
+class EventProvenanceResponse(BaseModel):
+    provider_key: str
+    version: str
+    observed_at: datetime
+    ingested_at: datetime
+    checksum: str
+
+
+class EventProvenanceListResponse(BaseModel):
+    items: list[EventProvenanceResponse]
+    count: int
+
+
 class ErrorResponse(BaseModel):
     code: str
     message: str
