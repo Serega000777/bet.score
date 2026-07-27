@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     live_heartbeat_seconds: float = Field(default=20.0, ge=5, le=60)
     live_max_connections: int = Field(default=1000, ge=1, le=100_000)
     live_max_connections_per_event: int = Field(default=200, ge=1, le=10_000)
+    outbox_batch_size: int = Field(default=100, ge=1, le=1000)
+    outbox_lease_seconds: float = Field(default=30, ge=5, le=300)
+    outbox_poll_seconds: float = Field(default=1, ge=0.1, le=30)
     api_cors_origins: Annotated[tuple[str, ...], NoDecode] = (
         "http://localhost:3000",
         "http://localhost:3001",

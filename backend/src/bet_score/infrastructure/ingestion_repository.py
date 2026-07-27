@@ -67,13 +67,14 @@ class SqlAlchemyEventIngestionRepository:
                 )
             ).one_or_none()
             if latest is not None and event.observed_at < latest.observed_at:
-                await self._insert_snapshot(
+                snapshot_id = await self._insert_snapshot(
                     provider_id,
                     latest.event_id,
                     event,
                     payload,
                     checksum,
                 )
+                await self._enqueue_event_update(snapshot_id, latest.event_id)
                 return IngestionResult(event_id=latest.event_id, snapshot_created=True)
 
             sport_id = await self._sport_id(event.sport_code, event.sport_name)
@@ -86,7 +87,14 @@ class SqlAlchemyEventIngestionRepository:
             away_id = await self._team_id(provider_id, sport_id, event.away)
             event_id = await self._event_id(provider_id, competition_id, event)
             await self._replace_participants(event_id, home_id, away_id, event)
-            await self._insert_snapshot(provider_id, event_id, event, payload, checksum)
+            snapshot_id = await self._insert_snapshot(
+                provider_id,
+                event_id,
+                event,
+                payload,
+                checksum,
+            )
+            await self._enqueue_event_update(snapshot_id, event_id)
             return IngestionResult(event_id=event_id, snapshot_created=True)
 
     async def _insert_snapshot(
@@ -96,28 +104,50 @@ class SqlAlchemyEventIngestionRepository:
         event: ProviderEvent,
         payload: dict[str, Any],
         checksum: str,
-    ) -> None:
+    ) -> UUID:
+        return cast(
+            UUID,
+            (
+                await self._session.execute(
+                    text(
+                        """
+                        INSERT INTO provider_event_snapshot(
+                          provider_id, external_event_id, event_id, version,
+                          observed_at, checksum, payload
+                        )
+                        VALUES(
+                          :provider_id, :external_id, :event_id, :version,
+                          :observed_at, :checksum, CAST(:payload AS jsonb)
+                        )
+                        RETURNING id
+                        """
+                    ),
+                    {
+                        "provider_id": provider_id,
+                        "external_id": event.external_id,
+                        "event_id": event_id,
+                        "version": event.version,
+                        "observed_at": event.observed_at,
+                        "checksum": checksum,
+                        "payload": json.dumps(payload, ensure_ascii=False, sort_keys=True),
+                    },
+                )
+            ).scalar_one(),
+        )
+
+    async def _enqueue_event_update(self, snapshot_id: UUID, event_id: UUID) -> None:
         await self._session.execute(
             text(
                 """
-                    INSERT INTO provider_event_snapshot(
-                      provider_id, external_event_id, event_id, version,
-                      observed_at, checksum, payload
-                    )
-                    VALUES(
-                      :provider_id, :external_id, :event_id, :version,
-                      :observed_at, :checksum, CAST(:payload AS jsonb)
-                    )
-                    """
+                INSERT INTO event_outbox(
+                  source_snapshot_id, event_id, event_type, protocol_version
+                )
+                VALUES(:snapshot_id, :event_id, 'event.updated', 1)
+                """
             ),
             {
-                "provider_id": provider_id,
-                "external_id": event.external_id,
+                "snapshot_id": snapshot_id,
                 "event_id": event_id,
-                "version": event.version,
-                "observed_at": event.observed_at,
-                "checksum": checksum,
-                "payload": json.dumps(payload, ensure_ascii=False, sort_keys=True),
             },
         )
 

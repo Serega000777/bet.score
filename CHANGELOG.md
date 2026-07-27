@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Добавлен transactional outbox для надёжной доставки ingestion → Redis.
 - Добавлены heartbeat, лимиты и bounded-метрики LIVE WebSocket-соединений.
 - Добавлен безопасный LIVE-канал Redis Pub/Sub → WebSocket → Telegram Mini App.
 - Добавлен readiness-контроль PostgreSQL и Redis с ограниченным временем ожидания.

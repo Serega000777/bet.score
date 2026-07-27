@@ -63,6 +63,19 @@ services:
       redis:
         condition: service_healthy
 
+  outbox:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: ${ENV_FILE:-.env.example}
+    command: ["bet-score-outbox"]
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
   frontend:
     build:
       context: .

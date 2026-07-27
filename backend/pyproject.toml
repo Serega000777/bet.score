@@ -28,6 +28,7 @@ dev = [
 
 [project.scripts]
 bet-score-migrate = "bet_score.infrastructure.migrations:main"
+bet-score-outbox = "bet_score.infrastructure.outbox_worker:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bet_score"]
