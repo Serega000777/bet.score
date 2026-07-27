@@ -75,7 +75,62 @@ describe('MatchDetail', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(await screen.findByText('1:0')).toBeDefined();
   });
+
+  it('обновляет канонические факты после LIVE-сигнала', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response(event))
+      .mockResolvedValueOnce(response({ items: [], count: 0 }))
+      .mockResolvedValueOnce(
+        response({
+          ...event,
+          home: { ...event.home, score: 2 },
+          away: { ...event.away, score: 1 },
+        }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('WebSocket', FakeWebSocket);
+
+    render(<MatchDetail eventId={event.id} />);
+    expect(await screen.findByText('1:0')).toBeDefined();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+    FakeWebSocket.instance?.emit(
+      'message',
+      new MessageEvent('message', {
+        data: JSON.stringify({
+          type: 'event.updated',
+          protocol_version: 1,
+          event_id: event.id,
+        }),
+      }),
+    );
+
+    expect(await screen.findByText('2:1')).toBeDefined();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });
+
+class FakeWebSocket {
+  static instance: FakeWebSocket | null = null;
+  private readonly listeners = new Map<string, EventListener>();
+
+  constructor(readonly url: string) {
+    FakeWebSocket.instance = this;
+  }
+
+  addEventListener(type: string, listener: EventListener): void {
+    this.listeners.set(type, listener);
+  }
+
+  emit(type: string, event: Event): void {
+    this.listeners.get(type)?.(event);
+  }
+
+  close(): void {
+    return undefined;
+  }
+}
 
 function response(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
