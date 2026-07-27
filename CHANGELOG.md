@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Добавлены измеримые SLO, Prometheus alert rules и monitoring-профиль.
 - Добавлены масштабируемые Prometheus-метрики transactional outbox.
 - Добавлен transactional outbox для надёжной доставки ingestion → Redis.
 - Добавлены heartbeat, лимиты и bounded-метрики LIVE WebSocket-соединений.

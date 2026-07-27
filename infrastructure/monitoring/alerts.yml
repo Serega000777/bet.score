@@ -1,0 +1,85 @@
+groups:
+  - name: bet-score
+    rules:
+      - alert: BetScoreMetricsTargetDown
+        expr: up{job="bet-score-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Метрики bet.score недоступны
+
+      - alert: BetScoreApiHighErrorRate
+        expr: |
+          (
+            sum(rate(bet_score_http_requests_total{status=~"5.."}[10m]))
+            /
+            clamp_min(sum(rate(bet_score_http_requests_total[10m])), 0.001)
+          ) > 0.01
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Доля HTTP 5xx превышает 1%
+
+      - alert: BetScoreApiHighP95Latency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(bet_score_http_request_duration_seconds_bucket[10m])) by (le)
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: p95 API превышает 500 мс
+
+      - alert: BetScoreOutboxMetricsUnavailable
+        expr: bet_score_outbox_available == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Метрики transactional outbox недоступны
+
+      - alert: BetScoreOutboxDeliveryStalled
+        expr: |
+          bet_score_outbox_pending > 0
+          and bet_score_outbox_oldest_pending_seconds > 60
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Доставка outbox остановилась
+
+      - alert: BetScoreOutboxRetriesElevated
+        expr: increase(bet_score_outbox_retries_total[10m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Outbox часто повторяет доставку
+
+      - alert: BetScoreLiveCapacityHigh
+        expr: |
+          bet_score_live_connections
+          /
+          clamp_min(bet_score_live_connection_limit, 1) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: LIVE использует более 90% лимита соединений
+
+      - alert: BetScoreLiveConnectionsRejected
+        expr: |
+          (
+            increase(bet_score_live_connection_rejections_total[10m])
+            /
+            clamp_min(increase(bet_score_live_connection_attempts_total[10m]), 1)
+          ) > 0.001
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: LIVE-соединения отклоняются по лимиту

@@ -21,7 +21,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    metrics = HttpMetrics()
+    metrics = HttpMetrics(live_connection_limit=settings.live_max_connections)
     live_connections = LiveConnectionRegistry(
         total_limit=settings.live_max_connections,
         per_event_limit=settings.live_max_connections_per_event,

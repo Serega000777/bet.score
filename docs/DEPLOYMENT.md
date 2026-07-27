@@ -2,7 +2,7 @@
 
 ## Локальное окружение
 
-Скопируйте `.env.example` в `.env` и выполните `docker compose up --build`. Профиль gateway запускается командой `docker compose --profile gateway up --build`.
+Скопируйте `.env.example` в `.env` и выполните `docker compose up --build`. Профиль gateway запускается командой `docker compose --profile gateway up --build`, monitoring — `docker compose --profile monitoring up --build`.
 
 ## Production-принципы
 
@@ -14,4 +14,6 @@
 - API и workers масштабируются независимо;
 - rollback использует предыдущий образ и только обратно совместимые миграции.
 
-Конкретный облачный провайдер, домены, SLO и disaster recovery параметры выбираются до первого production-окружения и фиксируются отдельным ADR.
+Начальные измеримые цели описаны в `docs/SLO.md`. Конкретный облачный провайдер,
+домены, канал доставки алертов и disaster recovery параметры выбираются до
+первого production-окружения и фиксируются отдельным ADR.

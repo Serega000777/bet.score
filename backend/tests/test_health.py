@@ -78,7 +78,10 @@ async def test_metrics_use_route_templates_instead_of_raw_paths() -> None:
     assert 'route="unmatched",status="404"} 1' in response.text
     assert "not-found-with-user-controlled-value" not in response.text
     assert "bet_score_live_connections 0" in response.text
+    assert "bet_score_live_connection_limit 1000" in response.text
+    assert "bet_score_live_connection_attempts_total 0" in response.text
     assert "bet_score_live_connection_rejections_total 0" in response.text
+    assert 'route="/health",le="+Inf"} 1' in response.text
     assert "bet_score_outbox_available 1" in response.text
     assert "bet_score_outbox_pending 3" in response.text
     assert "bet_score_outbox_oldest_pending_seconds 12.500000" in response.text

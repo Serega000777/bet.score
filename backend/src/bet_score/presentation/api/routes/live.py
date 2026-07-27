@@ -29,6 +29,7 @@ async def event_updates(
 
     registry = websocket.app.state.live_connections
     metrics = websocket.app.state.http_metrics
+    metrics.attempt_live_connection()
     if not await registry.try_acquire(event_id):
         metrics.reject_live_connection()
         await websocket.close(code=4429, reason="connection_limit_reached")
