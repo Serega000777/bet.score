@@ -12,6 +12,18 @@ class OutboxMessage:
     attempts: int
 
 
+@dataclass(frozen=True, slots=True)
+class OutboxStats:
+    pending: int
+    oldest_pending_seconds: float
+    delivered: int
+    retries: int
+
+
+class OutboxStatsReader(Protocol):
+    async def get_stats(self) -> OutboxStats: ...
+
+
 class OutboxRepository(Protocol):
     async def claim(self, *, batch_size: int, lease_seconds: float) -> list[OutboxMessage]: ...
 

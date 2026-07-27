@@ -18,6 +18,7 @@ from bet_score.domain.ingestion import ProviderCompetition, ProviderEvent, Provi
 from bet_score.infrastructure.catalog_repository import SqlAlchemyCatalogRepository
 from bet_score.infrastructure.ingestion_repository import SqlAlchemyEventIngestionRepository
 from bet_score.infrastructure.outbox_repository import SqlAlchemyOutboxRepository
+from bet_score.infrastructure.outbox_stats import SqlAlchemyOutboxStatsReader
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
@@ -158,5 +159,12 @@ async def test_postgres_ingestion_is_idempotent_and_preserves_provenance() -> No
             ).all()
         assert any(row.delivered for row in states)
         assert any(row.last_error_code == "publish_failed" for row in states)
+
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            stats = await SqlAlchemyOutboxStatsReader(session).get_stats()
+        assert stats.pending >= 2
+        assert stats.oldest_pending_seconds >= 0
+        assert stats.delivered >= 1
+        assert stats.retries >= 1
     finally:
         await engine.dispose()

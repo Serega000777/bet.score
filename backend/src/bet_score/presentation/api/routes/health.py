@@ -2,9 +2,13 @@ from typing import Literal
 
 from fastapi import APIRouter, Request, Response, status
 from pydantic import BaseModel
+from sqlalchemy.exc import SQLAlchemyError
 
 from bet_score.config import get_settings
-from bet_score.presentation.api.dependencies import ReadinessServiceDependency
+from bet_score.presentation.api.dependencies import (
+    OutboxStatsReaderDependency,
+    ReadinessServiceDependency,
+)
 
 router = APIRouter(tags=["system"])
 
@@ -46,8 +50,16 @@ async def readiness(
 
 
 @router.get("/metrics", include_in_schema=False)
-async def metrics(request: Request) -> Response:
+async def metrics(
+    request: Request,
+    outbox_reader: OutboxStatsReaderDependency,
+) -> Response:
+    try:
+        outbox = await outbox_reader.get_stats()
+    except SQLAlchemyError:
+        outbox = None
     return Response(
-        content=request.app.state.http_metrics.render(),
+        content=request.app.state.http_metrics.render(outbox),
         media_type="text/plain; version=0.0.4; charset=utf-8",
+        headers={"Cache-Control": "no-store"},
     )

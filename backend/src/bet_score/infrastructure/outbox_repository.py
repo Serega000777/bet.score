@@ -55,9 +55,16 @@ class SqlAlchemyOutboxRepository:
             await connection.execute(
                 text(
                     """
-                    UPDATE event_outbox
-                    SET delivered_at = now(), locked_until = NULL, last_error_code = NULL
-                    WHERE id = :message_id AND delivered_at IS NULL
+                    WITH delivered AS (
+                      UPDATE event_outbox
+                      SET delivered_at = now(), locked_until = NULL, last_error_code = NULL
+                      WHERE id = :message_id AND delivered_at IS NULL
+                      RETURNING 1
+                    )
+                    UPDATE outbox_delivery_stats
+                    SET delivered = delivered + (SELECT count(*) FROM delivered),
+                        updated_at = now()
+                    WHERE singleton
                     """
                 ),
                 {"message_id": message_id},
@@ -68,11 +75,18 @@ class SqlAlchemyOutboxRepository:
             await connection.execute(
                 text(
                     """
-                    UPDATE event_outbox
-                    SET available_at = now() + make_interval(secs => :retry_seconds),
-                        locked_until = NULL,
-                        last_error_code = 'publish_failed'
-                    WHERE id = :message_id AND delivered_at IS NULL
+                    WITH failed AS (
+                      UPDATE event_outbox
+                      SET available_at = now() + make_interval(secs => :retry_seconds),
+                          locked_until = NULL,
+                          last_error_code = 'publish_failed'
+                      WHERE id = :message_id AND delivered_at IS NULL
+                      RETURNING 1
+                    )
+                    UPDATE outbox_delivery_stats
+                    SET retries = retries + (SELECT count(*) FROM failed),
+                        updated_at = now()
+                    WHERE singleton
                     """
                 ),
                 {
