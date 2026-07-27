@@ -25,10 +25,20 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
       APP_ENV: test
       DATABASE_URL: postgresql+asyncpg://bet_score:bet_score@localhost:5432/bet_score_test
       TEST_DATABASE_URL: postgresql+asyncpg://bet_score:bet_score@localhost:5432/bet_score_test
+      TEST_REDIS_URL: redis://localhost:6379/15
     defaults:
       run:
         working-directory: backend

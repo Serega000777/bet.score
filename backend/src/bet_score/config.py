@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     database_url: str = "postgresql+asyncpg://bet_score:bet_score@localhost:5432/bet_score"
     redis_url: str = "redis://localhost:6379/0"
+    readiness_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
     api_cors_origins: Annotated[tuple[str, ...], NoDecode] = (
         "http://localhost:3000",
         "http://localhost:3001",

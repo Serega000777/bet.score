@@ -6,10 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bet_score.application.auth import AuthService
 from bet_score.application.catalog import CatalogService
+from bet_score.application.readiness import ReadinessService
 from bet_score.config import get_settings
 from bet_score.infrastructure.catalog_repository import SqlAlchemyCatalogRepository
 from bet_score.infrastructure.database import get_database_session
 from bet_score.infrastructure.identity_repository import SqlAlchemyIdentityRepository
+from bet_score.infrastructure.readiness import probe_database, probe_redis
 from bet_score.infrastructure.telegram_auth import TelegramInitDataVerifier
 
 
@@ -42,3 +44,14 @@ def get_auth_service(
 
 
 AuthServiceDependency = Annotated[AuthService, Depends(get_auth_service)]
+
+
+def get_readiness_service() -> ReadinessService:
+    settings = get_settings()
+    return ReadinessService(
+        {"postgres": probe_database, "redis": probe_redis},
+        timeout_seconds=settings.readiness_timeout_seconds,
+    )
+
+
+ReadinessServiceDependency = Annotated[ReadinessService, Depends(get_readiness_service)]
