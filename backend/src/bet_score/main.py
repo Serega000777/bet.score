@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from bet_score.application.live import LiveConnectionRegistry
 from bet_score.config import get_settings
 from bet_score.infrastructure.database import dispose_engine
 from bet_score.infrastructure.observability import HttpMetrics, configure_observability
@@ -21,6 +22,10 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     settings = get_settings()
     metrics = HttpMetrics()
+    live_connections = LiveConnectionRegistry(
+        total_limit=settings.live_max_connections,
+        per_event_limit=settings.live_max_connections_per_event,
+    )
     application = FastAPI(
         title="bet.score API",
         description="API платформы объяснимой спортивной аналитики",
@@ -38,6 +43,7 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-ID"],
     )
     application.state.http_metrics = metrics
+    application.state.live_connections = live_connections
     configure_observability(application, metrics)
     application.include_router(api_router, prefix="/api/v1")
     return application

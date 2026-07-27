@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://bet_score:bet_score@localhost:5432/bet_score"
     redis_url: str = "redis://localhost:6379/0"
     readiness_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
+    live_heartbeat_seconds: float = Field(default=20.0, ge=5, le=60)
+    live_max_connections: int = Field(default=1000, ge=1, le=100_000)
+    live_max_connections_per_event: int = Field(default=200, ge=1, le=10_000)
     api_cors_origins: Annotated[tuple[str, ...], NoDecode] = (
         "http://localhost:3000",
         "http://localhost:3001",

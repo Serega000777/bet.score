@@ -7,7 +7,12 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from bet_score.application.live import EventUpdated
+from bet_score.application.live import (
+    EventUpdated,
+    LiveConnectionRegistry,
+    LiveHeartbeat,
+    stream_live_messages,
+)
 from bet_score.infrastructure.live import RedisEventUpdateBroker
 from bet_score.main import create_app
 from bet_score.presentation.api.dependencies import (
@@ -26,6 +31,12 @@ class FakeCatalogService:
 
 class FakeSubscriber:
     async def subscribe(self, event_id: UUID) -> AsyncIterator[EventUpdated]:
+        yield EventUpdated(event_id=event_id)
+
+
+class BlockingSubscriber:
+    async def subscribe(self, event_id: UUID) -> AsyncIterator[EventUpdated]:
+        await asyncio.Event().wait()
         yield EventUpdated(event_id=event_id)
 
 
@@ -80,3 +91,36 @@ async def test_redis_broker_delivers_event_update_when_configured() -> None:
     finally:
         received.cancel()
         await subscription.aclose()
+
+
+@pytest.mark.asyncio
+async def test_heartbeat_does_not_cancel_pending_subscription() -> None:
+    messages = stream_live_messages(
+        BlockingSubscriber(),
+        EVENT_ID,
+        heartbeat_seconds=0.001,
+    )
+
+    first = await anext(messages)
+    second = await anext(messages)
+    await messages.aclose()
+
+    assert first == LiveHeartbeat()
+    assert second == LiveHeartbeat()
+
+
+@pytest.mark.asyncio
+async def test_connection_registry_enforces_and_releases_limits() -> None:
+    other_event_id = UUID("70000000-0000-0000-0000-000000000002")
+    registry = LiveConnectionRegistry(total_limit=2, per_event_limit=1)
+
+    assert await registry.try_acquire(EVENT_ID) is True
+    assert await registry.try_acquire(EVENT_ID) is False
+    assert await registry.try_acquire(other_event_id) is True
+    assert await registry.try_acquire(UUID(int=3)) is False
+    assert registry.total == 2
+
+    await registry.release(EVENT_ID)
+
+    assert registry.total == 1
+    assert await registry.try_acquire(EVENT_ID) is True
