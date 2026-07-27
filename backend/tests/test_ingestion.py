@@ -5,7 +5,6 @@ from uuid import UUID
 import pytest
 
 from bet_score.application.ingestion import EventIngestionService, IngestionResult
-from bet_score.application.live import EventUpdated
 from bet_score.domain.catalog import EventStatus
 from bet_score.domain.ingestion import ProviderCompetition, ProviderEvent, ProviderTeam
 
@@ -47,19 +46,10 @@ class FakeIngestionRepository:
         return IngestionResult(EVENT_ID, snapshot_created=len(self.checksums) == 1)
 
 
-class FakeEventUpdatePublisher:
-    def __init__(self) -> None:
-        self.updates: list[EventUpdated] = []
-
-    async def publish(self, update: EventUpdated) -> None:
-        self.updates.append(update)
-
-
 @pytest.mark.asyncio
 async def test_ingestion_checksum_is_stable_for_key_order() -> None:
     repository = FakeIngestionRepository()
-    publisher = FakeEventUpdatePublisher()
-    service = EventIngestionService(repository, publisher)
+    service = EventIngestionService(repository)
 
     first = await service.ingest(
         provider_event(),
@@ -73,7 +63,6 @@ async def test_ingestion_checksum_is_stable_for_key_order() -> None:
     assert first.snapshot_created is True
     assert second.snapshot_created is False
     assert repository.checksums[0] == repository.checksums[1]
-    assert publisher.updates == [EventUpdated(event_id=EVENT_ID)]
 
 
 @pytest.mark.asyncio

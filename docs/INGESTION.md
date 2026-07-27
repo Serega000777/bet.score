@@ -46,6 +46,20 @@ payload при неизменной версии считается наруше
 безопасные метаданные происхождения. Сырой payload и внешний ID поставщика
 остаются внутри доверенного backend-контура.
 
+## Transactional outbox
+
+Каждый новый `provider_event_snapshot` и соответствующий `event_outbox` создаются
+в одной PostgreSQL-транзакции. Повторная версия не создаёт дубликат сообщения:
+`source_snapshot_id` имеет уникальное ограничение.
+
+Отдельный процесс `bet-score-outbox` выбирает сообщения через
+`FOR UPDATE SKIP LOCKED`, назначает ограниченный lease и публикует
+`event.updated` в Redis. После ошибки сообщение освобождается с exponential
+backoff до 300 секунд. Доставка имеет семантику at-least-once: crash после Redis
+publish, но до PostgreSQL ACK может дать дубликат, безопасный для invalidation.
+В `last_error_code` сохраняется только фиксированный код, без DSN и текста
+исключения.
+
 ## Граница адаптера
 
 Будущий адаптер поставщика отвечает за HTTP timeout, retry с jitter, rate limit,

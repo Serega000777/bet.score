@@ -17,6 +17,7 @@ from bet_score.domain.catalog import EventStatus
 from bet_score.domain.ingestion import ProviderCompetition, ProviderEvent, ProviderTeam
 from bet_score.infrastructure.catalog_repository import SqlAlchemyCatalogRepository
 from bet_score.infrastructure.ingestion_repository import SqlAlchemyEventIngestionRepository
+from bet_score.infrastructure.outbox_repository import SqlAlchemyOutboxRepository
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
@@ -87,6 +88,7 @@ async def test_postgres_ingestion_is_idempotent_and_preserves_provenance() -> No
                         """
                         SELECT
                           count(DISTINCT s.id) AS snapshots,
+                          count(DISTINCT o.id) AS outbox_messages,
                           min(s.checksum) AS checksum,
                           min(e.status) AS status,
                           max(ep.score) FILTER (WHERE ep.role = 'home') AS home_score
@@ -94,6 +96,7 @@ async def test_postgres_ingestion_is_idempotent_and_preserves_provenance() -> No
                         JOIN data_provider p ON p.id = s.provider_id
                         JOIN sporting_event e ON e.id = s.event_id
                         JOIN event_participant ep ON ep.event_id = e.id
+                        JOIN event_outbox o ON o.source_snapshot_id = s.id
                         WHERE p.key = :provider_key
                         """
                     ),
@@ -101,6 +104,7 @@ async def test_postgres_ingestion_is_idempotent_and_preserves_provenance() -> No
                 )
             ).one()
             assert row.snapshots == 3
+            assert row.outbox_messages == 3
             assert len(row.checksum) == 64
             assert row.status == "live"
             assert row.home_score == 1
@@ -126,5 +130,33 @@ async def test_postgres_ingestion_is_idempotent_and_preserves_provenance() -> No
 
         assert [source.version for source in sources] == ["v2", "v1", "delayed-v0"]
         assert all(source.provider_key == provider_key for source in sources)
+
+        outbox = SqlAlchemyOutboxRepository(engine)
+        claimed = await outbox.claim(batch_size=100, lease_seconds=30)
+        event_messages = [message for message in claimed if message.event_id == first.event_id]
+        assert len(event_messages) == 3
+        assert all(message.attempts == 1 for message in event_messages)
+
+        await outbox.mark_delivered(event_messages[0].id)
+        await outbox.mark_failed(event_messages[1].id, retry_seconds=2)
+        async with engine.connect() as connection:
+            states = (
+                await connection.execute(
+                    text(
+                        """
+                        SELECT delivered_at IS NOT NULL AS delivered, last_error_code
+                        FROM event_outbox
+                        WHERE id IN (:delivered_id, :failed_id)
+                        ORDER BY id
+                        """
+                    ),
+                    {
+                        "delivered_id": event_messages[0].id,
+                        "failed_id": event_messages[1].id,
+                    },
+                )
+            ).all()
+        assert any(row.delivered for row in states)
+        assert any(row.last_error_code == "publish_failed" for row in states)
     finally:
         await engine.dispose()

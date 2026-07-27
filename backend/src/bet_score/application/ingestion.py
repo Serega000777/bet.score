@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import UUID
 
-from bet_score.application.live import EventUpdated, EventUpdatePublisher
 from bet_score.domain.ingestion import ProviderEvent
 
 MAX_PAYLOAD_BYTES = 1_000_000
@@ -31,13 +30,8 @@ class EventIngestionRepository(Protocol):
 
 
 class EventIngestionService:
-    def __init__(
-        self,
-        repository: EventIngestionRepository,
-        publisher: EventUpdatePublisher | None = None,
-    ) -> None:
+    def __init__(self, repository: EventIngestionRepository) -> None:
         self._repository = repository
-        self._publisher = publisher
 
     async def ingest(
         self,
@@ -55,7 +49,4 @@ class EventIngestionService:
         if len(serialized_payload.encode()) > MAX_PAYLOAD_BYTES:
             raise ValueError("Payload поставщика превышает допустимый размер")
         checksum = hashlib.sha256(serialized_payload.encode()).hexdigest()
-        result = await self._repository.ingest(event, payload=payload, checksum=checksum)
-        if result.snapshot_created and self._publisher is not None:
-            await self._publisher.publish(EventUpdated(event_id=result.event_id))
-        return result
+        return await self._repository.ingest(event, payload=payload, checksum=checksum)
