@@ -60,6 +60,13 @@ publish, но до PostgreSQL ACK может дать дубликат, безо
 В `last_error_code` сохраняется только фиксированный код, без DSN и текста
 исключения.
 
+Prometheus scrape читает межпроцессное состояние из PostgreSQL:
+`bet_score_outbox_pending`, `bet_score_outbox_oldest_pending_seconds`,
+`bet_score_outbox_delivered_total` и `bet_score_outbox_retries_total`.
+Исторические counters хранятся в singleton-строке и обновляются атомарно вместе
+с ACK/retry, поэтому scrape не сканирует всю историю. При недоступности БД
+`bet_score_outbox_available` становится `0`, а текст ошибки наружу не выходит.
+
 ## Граница адаптера
 
 Будущий адаптер поставщика отвечает за HTTP timeout, retry с jitter, rate limit,

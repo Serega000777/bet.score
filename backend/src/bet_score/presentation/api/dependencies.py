@@ -7,12 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bet_score.application.auth import AuthService
 from bet_score.application.catalog import CatalogService
 from bet_score.application.live import EventUpdateSubscriber
+from bet_score.application.outbox import OutboxStatsReader
 from bet_score.application.readiness import ReadinessService
 from bet_score.config import get_settings
 from bet_score.infrastructure.catalog_repository import SqlAlchemyCatalogRepository
 from bet_score.infrastructure.database import get_database_session
 from bet_score.infrastructure.identity_repository import SqlAlchemyIdentityRepository
 from bet_score.infrastructure.live import RedisEventUpdateBroker
+from bet_score.infrastructure.outbox_stats import SqlAlchemyOutboxStatsReader
 from bet_score.infrastructure.readiness import probe_database, probe_redis
 from bet_score.infrastructure.telegram_auth import TelegramInitDataVerifier
 
@@ -67,3 +69,12 @@ EventUpdateSubscriberDependency = Annotated[
     EventUpdateSubscriber,
     Depends(get_event_update_subscriber),
 ]
+
+
+def get_outbox_stats_reader(
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+) -> OutboxStatsReader:
+    return SqlAlchemyOutboxStatsReader(session)
+
+
+OutboxStatsReaderDependency = Annotated[OutboxStatsReader, Depends(get_outbox_stats_reader)]

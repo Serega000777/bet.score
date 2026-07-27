@@ -8,6 +8,8 @@ from uuid import UUID, uuid4
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import RequestResponseEndpoint
 
+from bet_score.application.outbox import OutboxStats
+
 logger = logging.getLogger("bet_score.access")
 
 REQUEST_ID_HEADER = "X-Request-ID"
@@ -30,7 +32,7 @@ class HttpMetrics:
             self._requests[(safe_method, route, status_code)] += 1
             self._duration_seconds[(safe_method, route)] += duration
 
-    def render(self) -> str:
+    def render(self, outbox: OutboxStats | None = None) -> str:
         lines = [
             "# HELP bet_score_http_requests_total Total HTTP requests.",
             "# TYPE bet_score_http_requests_total counter",
@@ -66,6 +68,28 @@ class HttpMetrics:
                 "LIVE connections rejected by capacity limits.",
                 "# TYPE bet_score_live_connection_rejections_total counter",
                 f"bet_score_live_connection_rejections_total {live_rejections}",
+            ]
+        )
+        outbox_available = int(outbox is not None)
+        outbox = outbox or OutboxStats(0, 0, 0, 0)
+        lines.extend(
+            [
+                "# HELP bet_score_outbox_available Whether outbox metrics are available.",
+                "# TYPE bet_score_outbox_available gauge",
+                f"bet_score_outbox_available {outbox_available}",
+                "# HELP bet_score_outbox_pending Pending outbox messages.",
+                "# TYPE bet_score_outbox_pending gauge",
+                f"bet_score_outbox_pending {outbox.pending}",
+                "# HELP bet_score_outbox_oldest_pending_seconds "
+                "Age of the oldest pending outbox message.",
+                "# TYPE bet_score_outbox_oldest_pending_seconds gauge",
+                f"bet_score_outbox_oldest_pending_seconds {outbox.oldest_pending_seconds:.6f}",
+                "# HELP bet_score_outbox_delivered_total Delivered outbox messages.",
+                "# TYPE bet_score_outbox_delivered_total counter",
+                f"bet_score_outbox_delivered_total {outbox.delivered}",
+                "# HELP bet_score_outbox_retries_total Retried outbox deliveries.",
+                "# TYPE bet_score_outbox_retries_total counter",
+                f"bet_score_outbox_retries_total {outbox.retries}",
             ]
         )
         return "\n".join(lines) + "\n"
