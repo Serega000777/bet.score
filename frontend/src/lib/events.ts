@@ -1,29 +1,11 @@
-export type EventStatus = 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
+import type { EventList, SportingEvent } from '@bet-score/contracts';
 
-export type Participant = {
-  id: string;
-  name: string;
-  short_name: string;
-  role: 'home' | 'away';
-  score: number | null;
-};
-
-export type SportingEvent = {
-  id: string;
-  sport: string;
-  competition_id: string;
-  competition: string;
-  country_code: string | null;
-  starts_at: string;
-  status: EventStatus;
-  home: Participant;
-  away: Participant;
-};
-
-export type EventList = {
-  items: SportingEvent[];
-  count: number;
-};
+export {
+  statusLabels,
+  type EventStatus,
+  type Participant,
+  type SportingEvent,
+} from '@bet-score/contracts';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
@@ -61,14 +43,6 @@ export function getEvents(signal?: AbortSignal): Promise<EventList> {
 export function getEvent(id: string, signal?: AbortSignal): Promise<SportingEvent> {
   return request<SportingEvent>(`/events/${encodeURIComponent(id)}`, signal);
 }
-
-export const statusLabels: Record<EventStatus, string> = {
-  scheduled: 'Скоро',
-  live: 'LIVE',
-  finished: 'Завершён',
-  postponed: 'Перенесён',
-  cancelled: 'Отменён',
-};
 
 export function formatEventDate(value: string): string {
   return new Intl.DateTimeFormat('ru-RU', {

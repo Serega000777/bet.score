@@ -4,8 +4,10 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json ./frontend/package.json
 COPY telegram-mini-app/package.json ./telegram-mini-app/package.json
+COPY packages/contracts/package.json ./packages/contracts/package.json
 RUN pnpm install --frozen-lockfile --filter @bet-score/telegram-mini-app...
 COPY telegram-mini-app ./telegram-mini-app
+COPY packages/contracts ./packages/contracts
 RUN pnpm --filter @bet-score/telegram-mini-app build
 
 FROM node:22-alpine AS runtime
