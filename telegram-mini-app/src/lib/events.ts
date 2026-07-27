@@ -20,6 +20,30 @@ export async function getEvents(signal?: AbortSignal): Promise<SportingEvent[]> 
   return payload.items;
 }
 
+export async function getEvent(id: string, signal?: AbortSignal): Promise<SportingEvent> {
+  const response = await fetch(`${apiUrl}/events/${encodeURIComponent(id)}`, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!response.ok) {
+    throw new EventRequestError(
+      response.status === 404 ? 'Матч не найден' : 'Не удалось загрузить матч',
+      response.status,
+    );
+  }
+  return (await response.json()) as SportingEvent;
+}
+
+export class EventRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 export function formatEventDate(value: string): string {
   return new Intl.DateTimeFormat('ru-RU', {
     day: 'numeric',

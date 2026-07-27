@@ -42,6 +42,9 @@ describe('EventCatalog', () => {
     expect(await screen.findByText('Премьер-лига')).toBeDefined();
     expect(screen.getByText('Север')).toBeDefined();
     expect(screen.getByText('Восток')).toBeDefined();
+    expect(
+      screen.getByRole('link', { name: 'Север — Восток' }).getAttribute('href'),
+    ).toBe(`/matches/${event.id}`);
   });
 
   it('показывает пустое состояние', async () => {
