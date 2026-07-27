@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { EventCatalog } from '../components/event-catalog';
+
 type User = {
   id: string;
   display_name: string;
@@ -94,8 +96,18 @@ function Dashboard({ user }: { user: User }) {
     <section className="dashboard">
       <p className="eyebrow">СЕССИЯ ПОДТВЕРЖДЕНА</p>
       <h1>Здравствуйте,<br />{user.display_name}</h1>
-      <p>Telegram-профиль безопасно связан с bet.score. Каталог матчей станет следующим общим экраном Mini App.</p>
+      <p>Telegram-профиль безопасно связан с bet.score. Ниже доступен общий каталог актуальных спортивных событий.</p>
       <div className="identity-card"><span>Аккаунт</span><strong>{user.username ? `@${user.username}` : 'Telegram'}</strong><span>Язык</span><strong>{user.locale.toUpperCase()}</strong></div>
+      <section className="matches">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">БЛИЖАЙШИЕ СОБЫТИЯ</p>
+            <h2>Матчи</h2>
+          </div>
+          <span>Ваше время</span>
+        </div>
+        <EventCatalog />
+      </section>
     </section>
   );
 }
