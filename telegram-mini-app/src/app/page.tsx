@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { EventCatalog } from '../components/event-catalog';
+import { SavedEventCatalog } from '../components/saved-event-catalog';
 
 type User = {
   id: string;
@@ -92,21 +93,27 @@ function StateCard({ mark, title, text, error = false }: { mark: string; title: 
 }
 
 function Dashboard({ user }: { user: User }) {
+  const [section, setSection] = useState<'catalog' | 'saved'>('catalog');
+
   return (
     <section className="dashboard">
       <p className="eyebrow">СЕССИЯ ПОДТВЕРЖДЕНА</p>
       <h1>Здравствуйте,<br />{user.display_name}</h1>
       <p>Telegram-профиль безопасно связан с bet.score. Ниже доступен общий каталог актуальных спортивных событий.</p>
       <div className="identity-card"><span>Аккаунт</span><strong>{user.username ? `@${user.username}` : 'Telegram'}</strong><span>Язык</span><strong>{user.locale.toUpperCase()}</strong></div>
+      <nav className="dashboard-tabs" aria-label="Разделы матчей">
+        <button type="button" aria-pressed={section === 'catalog'} onClick={() => setSection('catalog')}>Все матчи</button>
+        <button type="button" aria-pressed={section === 'saved'} onClick={() => setSection('saved')}>Сохранённые</button>
+      </nav>
       <section className="matches">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">БЛИЖАЙШИЕ СОБЫТИЯ</p>
-            <h2>Матчи</h2>
+            <p className="eyebrow">{section === 'catalog' ? 'БЛИЖАЙШИЕ СОБЫТИЯ' : 'ВАША ПОДБОРКА'}</p>
+            <h2>{section === 'catalog' ? 'Матчи' : 'Сохранённые матчи'}</h2>
           </div>
           <span>Ваше время</span>
         </div>
-        <EventCatalog />
+        {section === 'catalog' ? <EventCatalog /> : <SavedEventCatalog />}
       </section>
     </section>
   );

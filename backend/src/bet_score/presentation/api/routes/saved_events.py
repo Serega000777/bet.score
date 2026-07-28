@@ -8,7 +8,12 @@ from bet_score.presentation.api.dependencies import (
     CurrentUserDependency,
     SavedEventsServiceDependency,
 )
-from bet_score.presentation.api.schemas import ErrorResponse, EventListResponse, EventResponse
+from bet_score.presentation.api.schemas import (
+    ErrorResponse,
+    EventListResponse,
+    EventResponse,
+    SavedEventStatusResponse,
+)
 
 router = APIRouter(prefix="/saved-events", tags=["saved-events"])
 
@@ -45,6 +50,15 @@ async def save_event(
             content={"code": "event_not_found", "message": "Матч не найден"},
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{event_id}", response_model=SavedEventStatusResponse)
+async def get_saved_event_status(
+    event_id: UUID,
+    user: CurrentUserDependency,
+    service: SavedEventsServiceDependency,
+) -> SavedEventStatusResponse:
+    return SavedEventStatusResponse(saved=await service.contains(user.id, event_id))
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)

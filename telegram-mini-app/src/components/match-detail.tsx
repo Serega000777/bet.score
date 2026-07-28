@@ -8,6 +8,7 @@ import {
   formatEventDate,
   getEvent,
   getEventProvenance,
+  isEventSaved,
   removeSavedEvent,
   saveEvent,
   subscribeToEvent,
@@ -99,11 +100,25 @@ export function MatchDetail({ eventId }: { eventId: string }) {
 }
 
 function SaveEventButton({ eventId }: { eventId: string }) {
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<boolean | null>(null);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    isEventSaved(eventId, controller.signal)
+      .then(setSaved)
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setSaved(false);
+          setFailed(true);
+        }
+      });
+    return () => controller.abort();
+  }, [eventId]);
+
   const toggle = async () => {
+    if (saved === null) return;
     setPending(true);
     setFailed(false);
     try {
@@ -122,8 +137,8 @@ function SaveEventButton({ eventId }: { eventId: string }) {
 
   return (
     <div className="save-event">
-      <button type="button" disabled={pending} aria-pressed={saved} onClick={toggle}>
-        {pending ? 'Сохраняем…' : saved ? 'Сохранено ✓' : 'Сохранить матч'}
+      <button type="button" disabled={pending || saved === null} aria-pressed={saved ?? false} onClick={toggle}>
+        {saved === null ? 'Проверяем…' : pending ? 'Сохраняем…' : saved ? 'Сохранено ✓' : 'Сохранить матч'}
       </button>
       {failed && <span role="alert">Не удалось изменить сохранённые матчи.</span>}
     </div>

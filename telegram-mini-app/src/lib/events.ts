@@ -5,6 +5,7 @@ import type {
   EventProvenance,
   EventProvenanceList,
   EventUpdated,
+  SavedEventStatus,
   SportList,
   SportSummary,
   SportingEvent,
@@ -143,6 +144,26 @@ export async function saveEvent(id: string): Promise<void> {
     headers: { Accept: 'application/json' },
   });
   if (!response.ok) throw new Error('Не удалось сохранить матч');
+}
+
+export async function isEventSaved(id: string, signal?: AbortSignal): Promise<boolean> {
+  const response = await fetch(`${apiUrl}/saved-events/${encodeURIComponent(id)}`, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!response.ok) throw new Error('Не удалось проверить сохранённый матч');
+  return ((await response.json()) as SavedEventStatus).saved;
+}
+
+export async function getSavedEvents(signal?: AbortSignal): Promise<SportingEvent[]> {
+  const response = await fetch(`${apiUrl}/saved-events`, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!response.ok) throw new Error('Не удалось загрузить сохранённые матчи');
+  return ((await response.json()) as EventList).items;
 }
 
 export async function removeSavedEvent(id: string): Promise<void> {

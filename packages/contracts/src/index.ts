@@ -50,6 +50,10 @@ export type EventList = {
   count: number;
 };
 
+export type SavedEventStatus = {
+  saved: boolean;
+};
+
 export type EventProvenance = {
   provider_key: string;
   version: string;

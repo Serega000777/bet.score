@@ -62,38 +62,44 @@ describe('MatchDetail', () => {
   });
 
   it('повторяет временно неуспешный запрос', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(response({}, 503))
-      .mockResolvedValueOnce(response(event))
-      .mockResolvedValueOnce(response({ items: [], count: 0 }));
+    let eventRequests = 0;
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes('/saved-events/')) return response({ saved: false });
+      if (url.endsWith('/provenance')) return response({ items: [], count: 0 });
+      eventRequests += 1;
+      return eventRequests === 1 ? response({}, 503) : response(event);
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     render(<MatchDetail eventId={event.id} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Повторить' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(await screen.findByText('1:0')).toBeDefined();
+    expect(eventRequests).toBe(2);
   });
 
   it('обновляет канонические факты после LIVE-сигнала', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(response(event))
-      .mockResolvedValueOnce(response({ items: [], count: 0 }))
-      .mockResolvedValueOnce(
-        response({
+    let eventRequests = 0;
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes('/saved-events/')) return response({ saved: false });
+      if (url.endsWith('/provenance')) return response({ items: [], count: 0 });
+      eventRequests += 1;
+      return eventRequests === 1
+        ? response(event)
+        : response({
           ...event,
           home: { ...event.home, score: 2 },
           away: { ...event.away, score: 1 },
-        }),
-      );
+        });
+    });
     vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal('WebSocket', FakeWebSocket);
 
     render(<MatchDetail eventId={event.id} />);
     expect(await screen.findByText('1:0')).toBeDefined();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(eventRequests).toBe(1));
 
     FakeWebSocket.instance?.emit(
       'message',
@@ -107,7 +113,7 @@ describe('MatchDetail', () => {
     );
 
     expect(await screen.findByText('2:1')).toBeDefined();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(eventRequests).toBe(2);
   });
 
   it('идемпотентно сохраняет и удаляет матч', async () => {
@@ -128,10 +134,26 @@ describe('MatchDetail', () => {
     expect(await screen.findByRole('button', { name: 'Сохранить матч' })).toBeDefined();
 
     const mutations = fetchMock.mock.calls.filter((call) =>
-      String(call[0]).includes('/saved-events/'),
+      String(call[0]).includes('/saved-events/') && call[1]?.method,
     );
     expect(mutations[0]?.[1]).toMatchObject({ method: 'PUT' });
     expect(mutations[1]?.[1]).toMatchObject({ method: 'DELETE' });
+  });
+
+  it('восстанавливает сохранённое состояние с сервера', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes('/saved-events/')) return response({ saved: true });
+        if (url.endsWith('/provenance')) return response({ items: [], count: 0 });
+        return response(event);
+      }),
+    );
+
+    render(<MatchDetail eventId={event.id} />);
+
+    expect(await screen.findByRole('button', { name: 'Сохранено ✓' })).toBeDefined();
   });
 });
 
