@@ -1,14 +1,20 @@
 import type {
+  CompetitionList,
+  CompetitionSummary,
   EventList,
   EventProvenance,
   EventProvenanceList,
   EventUpdated,
+  SportList,
+  SportSummary,
   SportingEvent,
 } from '@bet-score/contracts';
 
 export {
   statusLabels,
+  type CompetitionSummary,
   type EventProvenance,
+  type SportSummary,
   type SportingEvent,
 } from '@bet-score/contracts';
 
@@ -70,8 +76,20 @@ function parseEventUpdate(raw: unknown, eventId: string): EventUpdated | null {
   }
 }
 
-export async function getEvents(signal?: AbortSignal): Promise<SportingEvent[]> {
-  const response = await fetch(`${apiUrl}/events`, {
+export type EventFilters = {
+  sport_code?: string;
+  competition_id?: string;
+};
+
+export async function getEvents(
+  filters: EventFilters = {},
+  signal?: AbortSignal,
+): Promise<SportingEvent[]> {
+  const query = new URLSearchParams();
+  if (filters.sport_code) query.set('sport_code', filters.sport_code);
+  if (filters.competition_id) query.set('competition_id', filters.competition_id);
+  const suffix = query.size > 0 ? `?${query.toString()}` : '';
+  const response = await fetch(`${apiUrl}/events${suffix}`, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
     signal,
@@ -81,6 +99,26 @@ export async function getEvents(signal?: AbortSignal): Promise<SportingEvent[]> 
   }
   const payload = (await response.json()) as EventList;
   return payload.items;
+}
+
+export async function getSports(signal?: AbortSignal): Promise<SportSummary[]> {
+  const response = await fetch(`${apiUrl}/sports`, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!response.ok) throw new Error('Не удалось загрузить виды спорта');
+  return ((await response.json()) as SportList).items;
+}
+
+export async function getCompetitions(signal?: AbortSignal): Promise<CompetitionSummary[]> {
+  const response = await fetch(`${apiUrl}/competitions`, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!response.ok) throw new Error('Не удалось загрузить соревнования');
+  return ((await response.json()) as CompetitionList).items;
 }
 
 export async function getEvent(id: string, signal?: AbortSignal): Promise<SportingEvent> {

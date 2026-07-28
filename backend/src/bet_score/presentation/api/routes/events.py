@@ -22,8 +22,15 @@ async def list_events(
     service: CatalogServiceDependency,
     starts_from: datetime | None = None,
     limit: int = Query(default=20, ge=1, le=100),
+    sport_code: str | None = Query(default=None, min_length=1, max_length=50),
+    competition_id: UUID | None = None,
 ) -> EventListResponse:
-    events = await service.list_upcoming_events(starts_from=starts_from, limit=limit)
+    events = await service.list_upcoming_events(
+        starts_from=starts_from,
+        limit=limit,
+        sport_code=sport_code,
+        competition_id=competition_id,
+    )
     items = [EventResponse.from_domain(event) for event in events]
     return EventListResponse(items=items, count=len(items))
 

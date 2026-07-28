@@ -10,6 +10,7 @@ export type Participant = {
 
 export type SportingEvent = {
   id: string;
+  sport_code: string;
   sport: string;
   competition_id: string;
   competition: string;
@@ -18,6 +19,30 @@ export type SportingEvent = {
   status: EventStatus;
   home: Participant;
   away: Participant;
+};
+
+export type SportSummary = {
+  code: string;
+  name: string;
+  event_count: number;
+};
+
+export type SportList = {
+  items: SportSummary[];
+  count: number;
+};
+
+export type CompetitionSummary = {
+  id: string;
+  sport_code: string;
+  name: string;
+  country_code: string | null;
+  event_count: number;
+};
+
+export type CompetitionList = {
+  items: CompetitionSummary[];
+  count: number;
 };
 
 export type EventList = {

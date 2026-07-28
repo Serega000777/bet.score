@@ -1,19 +1,22 @@
 from collections import defaultdict
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, select, text
+from sqlalchemy import Select, func, select, text
 from sqlalchemy.engine import RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bet_score.application.catalog import EventQuery
 from bet_score.domain.catalog import (
+    CompetitionSummary,
     EventProvenance,
     EventStatus,
     Participant,
     ParticipantRole,
     SportingEvent,
+    SportSummary,
 )
 from bet_score.infrastructure.catalog_tables import (
     competition,
@@ -30,10 +33,71 @@ class SqlAlchemyCatalogRepository:
 
     async def list_events(self, query: EventQuery) -> tuple[SportingEvent, ...]:
         statement = self._base_statement().where(sporting_event.c.starts_at >= query.starts_from)
+        if query.sport_code is not None:
+            statement = statement.where(sport.c.code == query.sport_code)
+        if query.competition_id is not None:
+            statement = statement.where(competition.c.id == query.competition_id)
         statement = statement.order_by(sporting_event.c.starts_at).limit(query.limit * 2)
         rows = (await self._session.execute(statement)).mappings().all()
         events = self._map_events(rows)
         return tuple(events[: query.limit])
+
+    async def list_sports(self, starts_from: datetime) -> tuple[SportSummary, ...]:
+        rows = (
+            await self._session.execute(
+                select(
+                    sport.c.code,
+                    sport.c.name,
+                    func.count(sporting_event.c.id).label("event_count"),
+                )
+                .join(competition, competition.c.sport_id == sport.c.id)
+                .join(sporting_event, sporting_event.c.competition_id == competition.c.id)
+                .where(sporting_event.c.starts_at >= starts_from)
+                .group_by(sport.c.id)
+                .order_by(sport.c.name)
+            )
+        ).mappings()
+        return tuple(
+            SportSummary(
+                code=row["code"],
+                name=row["name"],
+                event_count=row["event_count"],
+            )
+            for row in rows
+        )
+
+    async def list_competitions(
+        self,
+        starts_from: datetime,
+        sport_code: str | None,
+    ) -> tuple[CompetitionSummary, ...]:
+        statement = (
+            select(
+                competition.c.id,
+                sport.c.code.label("sport_code"),
+                competition.c.name,
+                competition.c.country_code,
+                func.count(sporting_event.c.id).label("event_count"),
+            )
+            .join(sport, sport.c.id == competition.c.sport_id)
+            .join(sporting_event, sporting_event.c.competition_id == competition.c.id)
+            .where(sporting_event.c.starts_at >= starts_from)
+            .group_by(competition.c.id, sport.c.code)
+            .order_by(competition.c.name)
+        )
+        if sport_code is not None:
+            statement = statement.where(sport.c.code == sport_code)
+        rows = (await self._session.execute(statement)).mappings()
+        return tuple(
+            CompetitionSummary(
+                id=row["id"],
+                sport_code=row["sport_code"],
+                name=row["name"],
+                country_code=row["country_code"],
+                event_count=row["event_count"],
+            )
+            for row in rows
+        )
 
     async def get_event(self, event_id: UUID) -> SportingEvent | None:
         statement = self._base_statement().where(sporting_event.c.id == event_id)

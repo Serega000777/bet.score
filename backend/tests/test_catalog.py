@@ -6,11 +6,13 @@ from httpx import ASGITransport, AsyncClient
 
 from bet_score.application.catalog import CatalogService, EventQuery
 from bet_score.domain.catalog import (
+    CompetitionSummary,
     EventProvenance,
     EventStatus,
     Participant,
     ParticipantRole,
     SportingEvent,
+    SportSummary,
 )
 from bet_score.main import create_app
 from bet_score.presentation.api.dependencies import get_catalog_service
@@ -68,6 +70,24 @@ class FakeCatalogRepository:
             ),
         )
 
+    async def list_sports(self, starts_from: datetime) -> tuple[SportSummary, ...]:
+        return (SportSummary(code="football", name="Футбол", event_count=len(self.events)),)
+
+    async def list_competitions(
+        self,
+        starts_from: datetime,
+        sport_code: str | None,
+    ) -> tuple[CompetitionSummary, ...]:
+        return (
+            CompetitionSummary(
+                id=make_event().competition_id,
+                sport_code="football",
+                name="Тестовая лига",
+                country_code="RU",
+                event_count=len(self.events),
+            ),
+        )
+
 
 @pytest.mark.asyncio
 async def test_catalog_service_limits_page_size() -> None:
@@ -94,8 +114,53 @@ async def test_events_api_returns_canonical_match() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["count"] == 1
+    assert payload["items"][0]["sport_code"] == "football"
     assert payload["items"][0]["home"]["name"] == "Север"
     assert payload["items"][0]["away"]["name"] == "Восток"
+
+
+@pytest.mark.asyncio
+async def test_events_api_forwards_canonical_filters() -> None:
+    repository = FakeCatalogRepository((make_event(),))
+    application = create_app()
+    application.dependency_overrides[get_catalog_service] = lambda: CatalogService(repository)
+    competition_id = make_event().competition_id
+
+    transport = ASGITransport(app=application)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/api/v1/events",
+            params={"sport_code": "football", "competition_id": str(competition_id)},
+        )
+
+    assert response.status_code == 200
+    assert repository.last_query is not None
+    assert repository.last_query.sport_code == "football"
+    assert repository.last_query.competition_id == competition_id
+
+
+@pytest.mark.asyncio
+async def test_catalog_navigation_api_returns_counts() -> None:
+    application = create_app()
+    application.dependency_overrides[get_catalog_service] = lambda: CatalogService(
+        FakeCatalogRepository((make_event(),))
+    )
+    transport = ASGITransport(app=application)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        sports = await client.get("/api/v1/sports")
+        competitions = await client.get(
+            "/api/v1/competitions",
+            params={"sport_code": "football"},
+        )
+
+    assert sports.json()["items"][0] == {
+        "code": "football",
+        "name": "Футбол",
+        "event_count": 1,
+    }
+    assert competitions.json()["items"][0]["sport_code"] == "football"
+    assert competitions.json()["items"][0]["event_count"] == 1
 
 
 @pytest.mark.asyncio
