@@ -136,6 +136,24 @@ export async function getEvent(id: string, signal?: AbortSignal): Promise<Sporti
   return (await response.json()) as SportingEvent;
 }
 
+export async function saveEvent(id: string): Promise<void> {
+  const response = await fetch(`${apiUrl}/saved-events/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error('Не удалось сохранить матч');
+}
+
+export async function removeSavedEvent(id: string): Promise<void> {
+  const response = await fetch(`${apiUrl}/saved-events/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error('Не удалось удалить матч из сохранённых');
+}
+
 export class EventRequestError extends Error {
   constructor(
     message: string,

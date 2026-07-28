@@ -109,6 +109,30 @@ describe('MatchDetail', () => {
     expect(await screen.findByText('2:1')).toBeDefined();
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
+
+  it('идемпотентно сохраняет и удаляет матч', async () => {
+    const fetchMock = vi.fn<
+      (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+    >(async (input) =>
+      String(input).endsWith('/provenance')
+        ? response({ items: [], count: 0 })
+        : response(event),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<MatchDetail eventId={event.id} />);
+    const button = await screen.findByRole('button', { name: 'Сохранить матч' });
+    fireEvent.click(button);
+    expect(await screen.findByRole('button', { name: 'Сохранено ✓' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранено ✓' }));
+    expect(await screen.findByRole('button', { name: 'Сохранить матч' })).toBeDefined();
+
+    const mutations = fetchMock.mock.calls.filter((call) =>
+      String(call[0]).includes('/saved-events/'),
+    );
+    expect(mutations[0]?.[1]).toMatchObject({ method: 'PUT' });
+    expect(mutations[1]?.[1]).toMatchObject({ method: 'DELETE' });
+  });
 });
 
 class FakeWebSocket {

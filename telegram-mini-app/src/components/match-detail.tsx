@@ -8,6 +8,8 @@ import {
   formatEventDate,
   getEvent,
   getEventProvenance,
+  removeSavedEvent,
+  saveEvent,
   subscribeToEvent,
   statusLabels,
   type EventProvenance,
@@ -82,6 +84,7 @@ export function MatchDetail({ eventId }: { eventId: string }) {
         <strong>{score(event)}</strong>
         <DetailTeam name={event.away.name} shortName={event.away.short_name} away />
       </div>
+      <SaveEventButton eventId={event.id} />
       <section className="analysis-pending">
         <p className="eyebrow">ОБЪЯСНИМЫЙ АНАЛИЗ</p>
         <h2>Факты собираются</h2>
@@ -92,6 +95,38 @@ export function MatchDetail({ eventId }: { eventId: string }) {
       </section>
       <Provenance eventId={event.id} />
     </section>
+  );
+}
+
+function SaveEventButton({ eventId }: { eventId: string }) {
+  const [saved, setSaved] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const toggle = async () => {
+    setPending(true);
+    setFailed(false);
+    try {
+      if (saved) {
+        await removeSavedEvent(eventId);
+      } else {
+        await saveEvent(eventId);
+      }
+      setSaved((value) => !value);
+    } catch {
+      setFailed(true);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className="save-event">
+      <button type="button" disabled={pending} aria-pressed={saved} onClick={toggle}>
+        {pending ? 'Сохраняем…' : saved ? 'Сохранено ✓' : 'Сохранить матч'}
+      </button>
+      {failed && <span role="alert">Не удалось изменить сохранённые матчи.</span>}
+    </div>
   );
 }
 
