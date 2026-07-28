@@ -62,6 +62,10 @@ class EventListResponse(BaseModel):
     count: int
 
 
+class SavedEventStatusResponse(BaseModel):
+    saved: bool
+
+
 class SportResponse(BaseModel):
     code: str
     name: str

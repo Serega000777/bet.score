@@ -75,6 +75,10 @@ class FakeSavedEventRepository:
         if event_id in self.event_ids:
             self.event_ids.remove(event_id)
 
+    async def contains(self, user_id: UUID, event_id: UUID) -> bool:
+        assert user_id == USER_ID
+        return event_id in self.event_ids
+
 
 class FakeCatalogRepository:
     async def list_events(self, query: EventQuery) -> tuple[SportingEvent, ...]:
@@ -111,12 +115,14 @@ async def test_saved_events_api_is_idempotent() -> None:
     ) as client:
         first = await client.put(f"/api/v1/saved-events/{EVENT_ID}")
         repeated = await client.put(f"/api/v1/saved-events/{EVENT_ID}")
+        status_response = await client.get(f"/api/v1/saved-events/{EVENT_ID}")
         listed = await client.get("/api/v1/saved-events")
         removed = await client.delete(f"/api/v1/saved-events/{EVENT_ID}")
         empty = await client.get("/api/v1/saved-events")
 
     assert first.status_code == 204
     assert repeated.status_code == 204
+    assert status_response.json() == {"saved": True}
     assert listed.json()["items"][0]["id"] == str(EVENT_ID)
     assert listed.json()["count"] == 1
     assert removed.status_code == 204

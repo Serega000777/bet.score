@@ -34,3 +34,14 @@ class SqlAlchemySavedEventRepository:
             )
         )
         await self._session.commit()
+
+    async def contains(self, user_id: UUID, event_id: UUID) -> bool:
+        return (
+            await self._session.scalar(
+                select(saved_event.c.event_id).where(
+                    saved_event.c.user_id == user_id,
+                    saved_event.c.event_id == event_id,
+                )
+            )
+            is not None
+        )

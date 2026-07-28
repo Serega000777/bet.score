@@ -82,6 +82,7 @@
 Все маршруты требуют действующую `HttpOnly` cookie-сессию.
 
 - `GET /api/v1/saved-events` возвращает до 100 сохранённых матчей пользователя;
+- `GET /api/v1/saved-events/{event_id}` возвращает признак `saved` для текущего пользователя;
 - `PUT /api/v1/saved-events/{event_id}` идемпотентно сохраняет существующий матч;
 - `DELETE /api/v1/saved-events/{event_id}` идемпотентно удаляет матч из сохранённых.
 

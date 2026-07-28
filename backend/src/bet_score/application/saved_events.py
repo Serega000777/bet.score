@@ -12,6 +12,8 @@ class SavedEventRepository(Protocol):
 
     async def remove(self, user_id: UUID, event_id: UUID) -> None: ...
 
+    async def contains(self, user_id: UUID, event_id: UUID) -> bool: ...
+
 
 class SavedEventNotFoundError(Exception):
     pass
@@ -44,3 +46,6 @@ class SavedEventsService:
 
     async def remove(self, user_id: UUID, event_id: UUID) -> None:
         await self._repository.remove(user_id, event_id)
+
+    async def contains(self, user_id: UUID, event_id: UUID) -> bool:
+        return await self._repository.contains(user_id, event_id)
