@@ -60,3 +60,19 @@ class EventProvenance:
     observed_at: datetime
     ingested_at: datetime
     checksum: str
+
+
+@dataclass(frozen=True, slots=True)
+class SportSummary:
+    code: str
+    name: str
+    event_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class CompetitionSummary:
+    id: UUID
+    sport_code: str
+    name: str
+    country_code: str | None
+    event_count: int

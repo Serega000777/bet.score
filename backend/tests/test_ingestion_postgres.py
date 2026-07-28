@@ -132,6 +132,23 @@ async def test_postgres_ingestion_is_idempotent_and_preserves_provenance() -> No
         assert [source.version for source in sources] == ["v2", "v1", "delayed-v0"]
         assert all(source.provider_key == provider_key for source in sources)
 
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            catalog = CatalogService(SqlAlchemyCatalogRepository(session))
+            sports = await catalog.list_sports(starts_from=event.starts_at - timedelta(days=1))
+            competitions = await catalog.list_competitions(
+                starts_from=event.starts_at - timedelta(days=1),
+                sport_code="football",
+            )
+            competition_id = next(item.id for item in competitions if item.sport_code == "football")
+            filtered = await catalog.list_upcoming_events(
+                starts_from=event.starts_at - timedelta(days=1),
+                sport_code="football",
+                competition_id=competition_id,
+            )
+        assert any(item.code == "football" and item.event_count >= 1 for item in sports)
+        assert any(item.sport_code == "football" and item.event_count >= 1 for item in competitions)
+        assert any(item.id == first.event_id for item in filtered)
+
         outbox = SqlAlchemyOutboxRepository(engine)
         claimed = await outbox.claim(batch_size=100, lease_seconds=30)
         event_messages = [message for message in claimed if message.event_id == first.event_id]

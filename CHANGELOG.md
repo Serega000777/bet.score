@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Добавлены API и интерфейс навигации по видам спорта и соревнованиям с фильтрацией каталога матчей.
 - Добавлены измеримые SLO, Prometheus alert rules и monitoring-профиль.
 - Добавлены масштабируемые Prometheus-метрики transactional outbox.
 - Добавлен transactional outbox для надёжной доставки ingestion → Redis.

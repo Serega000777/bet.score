@@ -4,7 +4,12 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from bet_score.domain.catalog import Participant, SportingEvent
+from bet_score.domain.catalog import (
+    CompetitionSummary,
+    Participant,
+    SportingEvent,
+    SportSummary,
+)
 
 
 class ParticipantResponse(BaseModel):
@@ -17,6 +22,7 @@ class ParticipantResponse(BaseModel):
 
 class EventResponse(BaseModel):
     id: UUID
+    sport_code: str
     sport: str
     competition_id: UUID
     competition: str
@@ -39,6 +45,7 @@ class EventResponse(BaseModel):
 
         return cls(
             id=event.id,
+            sport_code=event.sport_code,
             sport=event.sport_name,
             competition_id=event.competition_id,
             competition=event.competition_name,
@@ -52,6 +59,44 @@ class EventResponse(BaseModel):
 
 class EventListResponse(BaseModel):
     items: list[EventResponse]
+    count: int
+
+
+class SportResponse(BaseModel):
+    code: str
+    name: str
+    event_count: int
+
+    @classmethod
+    def from_domain(cls, item: SportSummary) -> "SportResponse":
+        return cls(code=item.code, name=item.name, event_count=item.event_count)
+
+
+class SportListResponse(BaseModel):
+    items: list[SportResponse]
+    count: int
+
+
+class CompetitionResponse(BaseModel):
+    id: UUID
+    sport_code: str
+    name: str
+    country_code: str | None
+    event_count: int
+
+    @classmethod
+    def from_domain(cls, item: CompetitionSummary) -> "CompetitionResponse":
+        return cls(
+            id=item.id,
+            sport_code=item.sport_code,
+            name=item.name,
+            country_code=item.country_code,
+            event_count=item.event_count,
+        )
+
+
+class CompetitionListResponse(BaseModel):
+    items: list[CompetitionResponse]
     count: int
 
 
